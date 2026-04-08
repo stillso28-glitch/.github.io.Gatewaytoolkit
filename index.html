@@ -2029,7 +2029,6 @@ function onTemplateChange() {
 
 async function drawResidentialNewListing(canvas, ctx) {
   var W = canvas.width, H = canvas.height;
-  // Light gray/white background
   ctx.fillStyle = '#f4f4f0';
   ctx.fillRect(0, 0, W, H);
 
@@ -2042,34 +2041,33 @@ async function drawResidentialNewListing(canvas, ctx) {
   var garage = document.getElementById('sm-res-garage').value || '';
   var year = document.getElementById('sm-res-year').value || '';
 
-  // "NEW LISTING" bold dark serif at top
+  // "NEW LISTING" heading
   ctx.fillStyle = '#1E2F39';
-  ctx.font = 'bold 110px "EB Garamond", Georgia, serif';
+  ctx.font = 'bold 100px "EB Garamond", Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText('NEW LISTING', W/2, 150);
+  ctx.fillText('NEW LISTING', W/2, 135);
 
   // Address in spaced uppercase
-  ctx.font = '600 30px "Montserrat", sans-serif';
-  ctx.letterSpacing = '4px';
+  ctx.font = '600 28px "Montserrat", sans-serif';
   ctx.fillStyle = '#3a4e5a';
-  ctx.fillText(address.toUpperCase(), W/2, 210);
-  ctx.letterSpacing = '0px';
+  ctx.fillText(address.toUpperCase(), W/2, 192);
 
   // Price
   if (price) {
-    ctx.font = '500 36px "Montserrat", sans-serif';
+    ctx.font = '500 34px "Montserrat", sans-serif';
     ctx.fillStyle = '#C8A84B';
-    ctx.fillText(price, W/2, 265);
+    ctx.fillText(price, W/2, 248);
   }
 
-  // Large centered property photo
-  var photoY = 300, photoH = 650;
+  // Property photo (slightly smaller to make room for agents)
+  var photoY = price ? 280 : 246, photoH = 560;
   var photoSrc = smPhotos[0];
   if (photoSrc) {
     try {
       var img = await loadImageAsync(photoSrc);
       var margin = 60;
       ctx.save();
+      ctx.beginPath();
       roundRect(ctx, margin, photoY, W - margin*2, photoH, 12);
       ctx.clip();
       var scale = Math.max((W - margin*2)/img.width, photoH/img.height);
@@ -2079,54 +2077,109 @@ async function drawResidentialNewListing(canvas, ctx) {
     } catch(e) {}
   } else {
     ctx.fillStyle = '#ddddd8';
+    ctx.beginPath();
     roundRect(ctx, 60, photoY, W - 120, photoH, 12);
     ctx.fill();
-    ctx.fillStyle = '#999';
-    ctx.font = '28px Montserrat';
+    ctx.fillStyle = '#aaa';
+    ctx.font = '26px Montserrat';
     ctx.fillText('Property Photo', W/2, photoY + photoH/2);
   }
 
-  // Gateway circular logo badge bottom right
+  // Gateway logo badge overlapping photo bottom-right — large and prominent
   try {
     var logoSrc = LOGO_CIRCLE_LIGHT || 'https://res.cloudinary.com/dnmrgpubz/image/upload/v1748440952/GWlogo_circle_o4vvuv.png';
     var logoImg = await loadImageAsync(logoSrc);
-    var sz = 120;
-    ctx.drawImage(logoImg, W - 60 - sz, photoY + photoH - sz/2 - 10, sz, sz);
+    var sz = 160;
+    ctx.drawImage(logoImg, W - 60 - sz, photoY + photoH - sz/2, sz, sz);
   } catch(e) {}
 
-  // Dark teal banner at bottom
-  var bannerY = photoY + photoH + 60;
-  ctx.fillStyle = '#2a3e48';
+  // Dark teal banner
+  var bannerY = photoY + photoH + 14;
+  ctx.fillStyle = '#1E2F39';
   ctx.fillRect(0, bannerY, W, H - bannerY);
 
-  // Property details icon row
+  // Thin accent line top of banner
+  ctx.fillStyle = '#C8A84B';
+  ctx.fillRect(0, bannerY, W, 3);
+
+  // Property details row
   var details = [];
-  if (beds) details.push('🛏 ' + beds + ' Bed');
-  if (baths) details.push('🚿 ' + baths + ' Bath');
-  if (sqft) details.push('📐 ' + sqft);
-  if (garage) details.push('🚗 ' + garage);
-  if (lot) details.push('📍 ' + lot);
-  if (year) details.push('🏗 ' + year);
+  if (beds) details.push({ icon:'🛏', val: beds + ' Bed' });
+  if (baths) details.push({ icon:'🚿', val: baths + ' Bath' });
+  if (sqft) details.push({ icon:'📐', val: sqft });
+  if (garage) details.push({ icon:'🚗', val: garage });
+  if (lot) details.push({ icon:'🌿', val: lot });
+  if (year) details.push({ icon:'🏗', val: year });
+
+  var dY = bannerY + 54;
   if (details.length > 0) {
-    ctx.font = '500 26px "Montserrat", sans-serif';
-    ctx.fillStyle = '#E4E3D4';
     ctx.textAlign = 'center';
+    ctx.font = '600 22px "Montserrat", sans-serif';
+    ctx.fillStyle = '#E4E3D4';
     var spacing = W / (details.length + 1);
     details.forEach(function(d, i) {
-      ctx.fillText(d, spacing * (i + 1), bannerY + 52);
+      ctx.fillText(d.icon + '  ' + d.val, spacing * (i + 1), dY);
     });
   }
 
-  // Website and phone in banner
-  ctx.font = '400 24px "Montserrat", sans-serif';
-  ctx.fillStyle = '#A2B6C0';
+  // Thin separator
+  dY += 22;
+  ctx.strokeStyle = 'rgba(162,182,192,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(60, dY);
+  ctx.lineTo(W - 60, dY);
+  ctx.stroke();
+  dY += 30;
+
+  // Agent section
+  ctx.textAlign = 'left';
+  var agentY = dY;
+  var hasAgent = smAgents.length > 0 && smAgents[0].name;
+  if (hasAgent) {
+    for (var ai = 0; ai < Math.min(smAgents.length, 2); ai++) {
+      var ag = smAgents[ai];
+      if (!ag.name) continue;
+      var agX = 80 + ai * 480;
+      // Photo circle
+      if (ag.photo) {
+        try {
+          var agImg = await loadImageAsync(ag.photo);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(agX + 40, agentY + 40, 40, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(agImg, agX, agentY, 80, 80);
+          ctx.restore();
+          ctx.strokeStyle = '#C8A84B';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(agX + 40, agentY + 40, 40, 0, Math.PI * 2);
+          ctx.stroke();
+        } catch(e) {}
+      }
+      var tX = ag.photo ? agX + 96 : agX;
+      ctx.font = '700 22px "Montserrat", sans-serif';
+      ctx.fillStyle = '#E4E3D4';
+      ctx.fillText(ag.name, tX, agentY + 22);
+      ctx.font = '400 16px "Montserrat", sans-serif';
+      ctx.fillStyle = '#A2B6C0';
+      if (ag.title) ctx.fillText(ag.title, tX, agentY + 44);
+      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 64);
+      if (ag.license) { ctx.font = '400 13px "Montserrat"'; ctx.fillStyle = '#5a7a86'; ctx.fillText('Lic. ' + ag.license, tX, agentY + 82); }
+    }
+    agentY += 105;
+  }
+
+  // Website and phone
   ctx.textAlign = 'center';
-  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W/2, H - 30);
+  ctx.font = '500 22px "Montserrat", sans-serif';
+  ctx.fillStyle = '#A2B6C0';
+  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W/2, H - 28);
 }
 
 async function drawResidentialJustSold(canvas, ctx) {
   var W = canvas.width, H = canvas.height;
-  // Dark navy background
   ctx.fillStyle = '#1E2F39';
   ctx.fillRect(0, 0, W, H);
 
@@ -2139,7 +2192,7 @@ async function drawResidentialJustSold(canvas, ctx) {
   var year = document.getElementById('sm-res-year').value || '';
 
   // Property photo at top with white border
-  var photoY = 60, photoH = 680;
+  var photoY = 50, photoH = 600;
   var photoSrc = smPhotos[0];
   if (photoSrc) {
     try {
@@ -2148,6 +2201,7 @@ async function drawResidentialJustSold(canvas, ctx) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(margin - border, photoY - border, W - (margin - border)*2, photoH + border*2);
       ctx.save();
+      ctx.beginPath();
       roundRect(ctx, margin, photoY, W - margin*2, photoH, 4);
       ctx.clip();
       var scale = Math.max((W - margin*2)/img.width, photoH/img.height);
@@ -2161,16 +2215,17 @@ async function drawResidentialJustSold(canvas, ctx) {
     ctx.fillStyle = '#2a3e48';
     ctx.fillRect(60, photoY, W - 120, photoH);
     ctx.fillStyle = '#5a6a72';
-    ctx.font = '28px Montserrat';
     ctx.textAlign = 'center';
+    ctx.font = '28px Montserrat';
     ctx.fillText('Property Photo', W/2, photoY + photoH/2);
   }
 
   // Address below photo
+  var infoY = photoY + photoH + 46;
   ctx.textAlign = 'left';
-  ctx.font = '500 28px "Montserrat", sans-serif';
+  ctx.font = '600 26px "Montserrat", sans-serif';
   ctx.fillStyle = '#A2B6C0';
-  ctx.fillText(address, 60, photoY + photoH + 60);
+  ctx.fillText(address, 60, infoY);
 
   // Details icon row
   var details = [];
@@ -2181,34 +2236,78 @@ async function drawResidentialJustSold(canvas, ctx) {
   if (lot) details.push('📍 ' + lot);
   if (year) details.push('🏗 ' + year);
   if (details.length) {
-    ctx.font = '400 24px "Montserrat", sans-serif';
+    ctx.font = '400 20px "Montserrat", sans-serif';
     ctx.fillStyle = '#E4E3D4';
-    ctx.fillText(details.join('  ·  '), 60, photoY + photoH + 100);
+    ctx.fillText(details.join('  ·  '), 60, infoY + 36);
   }
 
-  // Gateway circular logo bottom left
+  // Separator
+  var sepY = infoY + 60;
+  ctx.strokeStyle = 'rgba(162,182,192,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, sepY); ctx.lineTo(W - 60, sepY); ctx.stroke();
+
+  // Agent section
+  var agentY = sepY + 26;
+  var hasAgent = smAgents.length > 0 && smAgents[0].name;
+  if (hasAgent) {
+    for (var ai = 0; ai < Math.min(smAgents.length, 2); ai++) {
+      var ag = smAgents[ai];
+      if (!ag.name) continue;
+      var agX = 60 + ai * 460;
+      if (ag.photo) {
+        try {
+          var agImg = await loadImageAsync(ag.photo);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(agX + 38, agentY + 38, 38, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(agImg, agX, agentY, 76, 76);
+          ctx.restore();
+          ctx.strokeStyle = '#A2B6C0';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(agX + 38, agentY + 38, 38, 0, Math.PI * 2);
+          ctx.stroke();
+        } catch(e) {}
+      }
+      var tX = ag.photo ? agX + 90 : agX;
+      ctx.font = '700 20px "Montserrat", sans-serif';
+      ctx.fillStyle = '#E4E3D4';
+      ctx.textAlign = 'left';
+      ctx.fillText(ag.name, tX, agentY + 20);
+      ctx.font = '400 15px "Montserrat", sans-serif';
+      ctx.fillStyle = '#A2B6C0';
+      if (ag.title) ctx.fillText(ag.title, tX, agentY + 40);
+      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 58);
+      if (ag.license) { ctx.font = '400 12px Montserrat'; ctx.fillStyle = '#5a7a86'; ctx.fillText('Lic. ' + ag.license, tX, agentY + 75); }
+    }
+    agentY += 98;
+  }
+
+  // Gateway circular logo — large, bottom left
   try {
     var logoSrc = LOGO_CIRCLE_LIGHT || 'https://res.cloudinary.com/dnmrgpubz/image/upload/v1748440952/GWlogo_circle_o4vvuv.png';
     var logoImg = await loadImageAsync(logoSrc);
-    var sz = 130;
-    ctx.drawImage(logoImg, 60, H - sz - 40, sz, sz);
+    var sz = 155;
+    ctx.drawImage(logoImg, 60, H - sz - 50, sz, sz);
   } catch(e) {}
 
-  // "JUST SOLD!" bold large bottom right
+  // "JUST SOLD!" bold large — bottom right
   ctx.textAlign = 'right';
-  ctx.font = 'bold 90px "EB Garamond", Georgia, serif';
+  ctx.font = 'bold 96px "EB Garamond", Georgia, serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText('JUST SOLD!', W - 60, H - 140);
+  ctx.fillText('JUST SOLD!', W - 55, H - 155);
 
   // Script subtitle
-  ctx.font = 'italic 32px "EB Garamond", Georgia, serif';
+  ctx.font = 'italic 30px "EB Garamond", Georgia, serif';
   ctx.fillStyle = '#A2B6C0';
-  ctx.fillText('A huge congrats to our happy clients!', W - 60, H - 95);
+  ctx.fillText('A huge congrats to our happy clients!', W - 55, H - 108);
 
   // Website and phone
-  ctx.font = '400 22px "Montserrat", sans-serif';
+  ctx.font = '400 20px "Montserrat", sans-serif';
   ctx.fillStyle = '#6a7e88';
-  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W - 60, H - 45);
+  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W - 55, H - 50);
 }
 
 async function drawCommercialTemplate(canvas, ctx, templateName) {
@@ -2282,43 +2381,87 @@ async function drawCommercialTemplate(canvas, ctx, templateName) {
   }
 
   // Property details section
-  var detY = photoY + photoH + 50;
+  var detY = photoY + photoH + 44;
   ctx.textAlign = 'left';
-  ctx.font = '600 34px "Montserrat", sans-serif';
+  ctx.font = '600 32px "Montserrat", sans-serif';
   ctx.fillStyle = accent;
   ctx.fillText(address, 60, detY);
 
   if (commRate || price) {
-    ctx.font = '500 28px "Montserrat", sans-serif';
+    ctx.font = '500 26px "Montserrat", sans-serif';
     ctx.fillStyle = '#E4E3D4';
-    ctx.fillText(commRate || price, 60, detY + 50);
+    ctx.fillText(commRate || price, 60, detY + 44);
   }
 
+  var sfDetailY = detY + (commRate || price ? 86 : 44);
   if (commSF) {
-    ctx.font = '400 24px "Montserrat", sans-serif';
+    ctx.font = '400 22px "Montserrat", sans-serif';
     ctx.fillStyle = '#A2B6C0';
-    ctx.fillText(commSF, 60, detY + 95);
+    ctx.fillText(commSF, 60, sfDetailY);
+    sfDetailY += 36;
   }
-
   if (commDetail) {
-    ctx.font = 'italic 24px "EB Garamond", Georgia, serif';
-    ctx.fillStyle = '#6a8a96';
-    ctx.fillText(commDetail, 60, detY + 140);
+    ctx.font = 'italic 22px "EB Garamond", Georgia, serif';
+    ctx.fillStyle = '#7a9aaa';
+    ctx.fillText(commDetail, 60, sfDetailY);
   }
 
-  // Gateway circular logo bottom right
+  // Separator before agents
+  var agentSepY = Math.max(sfDetailY + 40, detY + 165);
+  ctx.strokeStyle = 'rgba(162,182,192,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, agentSepY); ctx.lineTo(W - 60, agentSepY); ctx.stroke();
+
+  // Agent section
+  var agentY = agentSepY + 28;
+  if (smAgents.length > 0 && smAgents[0].name) {
+    for (var ai2 = 0; ai2 < Math.min(smAgents.length, 2); ai2++) {
+      var ag2 = smAgents[ai2];
+      if (!ag2.name) continue;
+      var agX2 = 60 + ai2 * 470;
+      if (ag2.photo) {
+        try {
+          var agImg2 = await loadImageAsync(ag2.photo);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(agX2 + 36, agentY + 36, 36, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(agImg2, agX2, agentY, 72, 72);
+          ctx.restore();
+          ctx.strokeStyle = accent;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(agX2 + 36, agentY + 36, 36, 0, Math.PI * 2);
+          ctx.stroke();
+        } catch(e2) {}
+      }
+      var tX2 = ag2.photo ? agX2 + 84 : agX2;
+      ctx.font = '700 19px "Montserrat", sans-serif';
+      ctx.fillStyle = '#E4E3D4';
+      ctx.textAlign = 'left';
+      ctx.fillText(ag2.name, tX2, agentY + 19);
+      ctx.font = '400 14px "Montserrat", sans-serif';
+      ctx.fillStyle = accent;
+      if (ag2.title) ctx.fillText(ag2.title, tX2, agentY + 38);
+      ctx.fillStyle = '#A2B6C0';
+      if (ag2.phone) ctx.fillText(ag2.phone, tX2, agentY + 56);
+      if (ag2.license) { ctx.font = '400 12px Montserrat'; ctx.fillStyle = '#5a7a86'; ctx.fillText('Lic. ' + ag2.license, tX2, agentY + 72); }
+    }
+  }
+
+  // Gateway circular logo — large, bottom right
   try {
     var logoSrc = LOGO_CIRCLE_LIGHT || 'https://res.cloudinary.com/dnmrgpubz/image/upload/v1748440952/GWlogo_circle_o4vvuv.png';
     var logoImg = await loadImageAsync(logoSrc);
-    var sz = 110;
-    ctx.drawImage(logoImg, W - 60 - sz, H - sz - 30, sz, sz);
+    var sz = 150;
+    ctx.drawImage(logoImg, W - 60 - sz, H - sz - 36, sz, sz);
   } catch(e) {}
 
   // Website bottom center
   ctx.textAlign = 'center';
-  ctx.font = '400 22px "Montserrat", sans-serif';
+  ctx.font = '400 20px "Montserrat", sans-serif';
   ctx.fillStyle = '#5a6a72';
-  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W/2, H - 28);
+  ctx.fillText('www.gatewayrealtyadvisors.com  |  712-226-8000', W/2, H - 28);
 }
 
 async function updateSocialPreview() {
@@ -2368,13 +2511,13 @@ async function updateSocialPreview() {
   ctx.fillStyle = pal.text;
   ctx.fillText(heading, 60, y + 50);
 
-  // Gateway wordmark (top right)
+  // Gateway wordmark (top right) — larger
   try {
     var logoSrc = pal.logoKey === 'dark' ? LOGO_WORDMARK_DARK : LOGO_WORDMARK_LIGHT;
     var logoImg = await loadImageAsync(logoSrc);
-    var logoH = 34;
+    var logoH = 48;
     var logoW = logoH * (logoImg.width / logoImg.height);
-    ctx.drawImage(logoImg, W - 60 - logoW, y + 18, logoW, logoH);
+    ctx.drawImage(logoImg, W - 60 - logoW, y + 12, logoW, logoH);
   } catch(e) {}
 
   y += 110;
@@ -2585,6 +2728,14 @@ async function updateSocialPreview() {
     });
     ctx.textAlign = 'left';
   }
+
+  // Gateway circular logo — large, bottom right
+  try {
+    var circLogoSrc = LOGO_CIRCLE_LIGHT || 'https://res.cloudinary.com/dnmrgpubz/image/upload/v1748440952/GWlogo_circle_o4vvuv.png';
+    var circLogoImg = await loadImageAsync(circLogoSrc);
+    var clSz = 130;
+    ctx.drawImage(circLogoImg, W - 60 - clSz, H - clSz - 12, clSz, clSz);
+  } catch(e) {}
 
   // Bottom accent line
   ctx.fillStyle = pal.accent;
@@ -4647,9 +4798,10 @@ renderPastOMs();
     var div = document.createElement('div');
     div.style.cssText = 'margin:12px 0;padding:12px;background:rgba(162,182,192,0.08);border-radius:8px';
     div.innerHTML = '<strong style="font-size:13px">\u{1F4CA} T12 / Financials Upload</strong>' +
-      '<p style="color:var(--brand-gray);font-size:12px;margin:4px 0 8px">Upload CSV or XLSX with income & expense data (auto-detects monthly vs annual)</p>' +
+      '<p style="color:var(--brand-gray);font-size:12px;margin:4px 0 8px">Upload CSV, XLSX, or PDF with income & expense data (auto-detects monthly vs annual)</p>' +
       '<button class="btn-sm" onclick="document.getElementById(\'t12Input\').click()">Upload T12</button>' +
-      '<input type="file" id="t12Input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleT12Upload(this)">';
+      '<input type="file" id="t12Input" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="handleT12Upload(this)">' +
+      '<div id="t12Status" style="display:none;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px"></div>';
     tab3.insertBefore(div, tab3.firstChild);
   }
 
@@ -5189,22 +5341,21 @@ renderPastOMs();
     var file = input.files[0];
     var ext = file.name.split('.').pop().toLowerCase();
     if (ext === 'pdf') {
-      // Best-effort PDF text extraction via FileReader
+      // PDF text extraction via binary stream parsing
       var reader = new FileReader();
       reader.onload = function(e) {
         try {
-          var text = e.target.result;
-          // Check if readable text content exists
-          if (!text || text.length < 50) throw new Error('No readable text');
+          var text = extractPDFText(e.target.result);
+          if (!text || text.replace(/\s/g,'').length < 20) throw new Error('No readable text found — this may be a scanned/image PDF');
           var rows = parseFlatTextRentRoll(text);
-          if (!rows || rows.length < 2) throw new Error('Could not detect tabular data in PDF');
+          if (!rows || rows.length < 2) throw new Error('No unit data detected. Ensure the PDF contains readable rent roll data (not a scan). Try CSV or XLSX for best results.');
           parseRentRollRows(rows);
         } catch(err) {
-          rrStatus('⚠️ PDF could not be parsed: ' + err.message + '. Try exporting as CSV or XLSX instead.', true);
+          rrStatus('⚠️ ' + err.message + '. For best results, export rent roll as CSV or XLSX.', true);
         }
       };
       reader.onerror = function() { rrStatus('⚠️ Could not read PDF file. Try CSV or XLSX.', true); };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     } else if (ext === 'xlsx' || ext === 'xls') {
       readXlsxFile(file, function(rows) {
         if (!rows || rows.length < 2) { rrStatus('⚠️ Could not read file or file is empty. Check the format and try again.', true); return; }
@@ -5225,13 +5376,116 @@ renderPastOMs();
     input.value = '';
   };
 
+  // ---- PDF TEXT EXTRACTOR ----
+  // Extracts visible text from PDF binary using BT...ET stream parsing
+  function extractPDFText(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer);
+    var str = '';
+    for (var i = 0; i < Math.min(bytes.length, 500000); i++) {
+      str += String.fromCharCode(bytes[i]);
+    }
+    var texts = [];
+    // Match BT...ET content blocks
+    var btRe = /BT\s([\s\S]*?)ET/g;
+    var m;
+    while ((m = btRe.exec(str)) !== null) {
+      var block = m[1];
+      // Extract string literals: (text) Tj or (text) TJ or [(text)] TJ
+      var strRe = /\(([^)]*)\)\s*(?:Tj|TJ|'|")/g;
+      var sm;
+      var blockTexts = [];
+      while ((sm = strRe.exec(block)) !== null) {
+        var t = sm[1].replace(/\\n/g, '\n').replace(/\\r/g, '').replace(/\\\(/g, '(').replace(/\\\)/g, ')').replace(/\\\\/g, '\\');
+        if (t.trim()) blockTexts.push(t.trim());
+      }
+      if (blockTexts.length) texts.push(blockTexts.join(' '));
+    }
+    // Fallback: try extracting any printable text lines
+    if (texts.length === 0) {
+      var printable = str.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/ {3,}/g, '\n');
+      texts = printable.split(/\n+/).filter(function(l) { return l.trim().length > 4; });
+    }
+    return texts.join('\n');
+  }
+
   function parseFlatTextRentRoll(text) {
-    // Try to detect lines with rent-like patterns
-    var lines = text.split(/\r?\n/).filter(function(l) { return l.trim().length > 3; });
-    var rows = [['Unit #', 'Tenant', 'Lease Start', 'Lease End', 'Rent', 'SqFt', 'Vacancy']];
+    var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 2; });
+
+    // Strategy: group lines into units by looking for rent amounts and bed/bath patterns
+    var unitGroups = [];
+    var currentGroup = null;
+
+    var rentPattern = /\$[\d,]+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?\s*\/\s*(?:mo|month)/i;
+    var unitTypePattern = /(\d+)\s*(?:bed|br|bdrm|bedroom).*?(\d+(?:\.\d)?)\s*(?:bath|ba|bth)/i;
+    var datePattern = /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/;
+    var unitNumPattern = /^(?:unit\s*)?#?\s*(\d+[a-z]?)\b/i;
+
     lines.forEach(function(line) {
-      var parts = line.trim().split(/\s{2,}|\t/);
-      if (parts.length >= 3) rows.push(parts);
+      var unitTypeM = line.match(unitTypePattern);
+      var unitNumM = line.match(unitNumPattern);
+      var hasRent = rentPattern.test(line);
+      var hasDate = datePattern.test(line);
+
+      if (unitTypeM || (unitNumM && (hasRent || hasDate))) {
+        if (currentGroup) unitGroups.push(currentGroup);
+        currentGroup = { lines: [line], unitType: unitTypeM ? (unitTypeM[1] + 'BR/' + unitTypeM[2] + 'BA') : '', unitNum: unitNumM ? unitNumM[1] : '' };
+      } else if (currentGroup && (hasRent || hasDate || line.length < 60)) {
+        currentGroup.lines.push(line);
+      }
+    });
+    if (currentGroup) unitGroups.push(currentGroup);
+
+    // If no groups found, try a simpler approach: look for dollar amounts on each line
+    if (unitGroups.length === 0) {
+      lines.forEach(function(line) {
+        if (rentPattern.test(line)) {
+          unitGroups.push({ lines: [line], unitType: '', unitNum: '' });
+        }
+      });
+    }
+
+    if (unitGroups.length === 0) return null;
+
+    // Now consolidate into unit mix rows (aggregated by type)
+    var unitMix = {};
+    unitGroups.forEach(function(grp) {
+      var fullText = grp.lines.join(' ');
+      var typeM = fullText.match(unitTypePattern);
+      var type = grp.unitType || (typeM ? (typeM[1] + 'BR/' + typeM[2] + 'BA') : 'Unit');
+      var rentM = fullText.match(/\$\s*([\d,]+(?:\.\d{1,2})?)/);
+      var rent = rentM ? parseFloat(rentM[1].replace(/,/g,'')) : 0;
+      var sfM = fullText.match(/([\d,]+)\s*(?:sq\.?\s*ft\.?|SF)\b/i);
+      var sf = sfM ? parseFloat(sfM[1].replace(/,/g,'')) : 0;
+      var isVacant = /vacant|empty|unoccupied/i.test(fullText);
+      var dateMatches = fullText.match(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g) || [];
+      var leaseStart = dateMatches[0] || '';
+      var leaseEnd = dateMatches[1] || '';
+      var tenantM = fullText.match(/[A-Z][a-z]+\s+[A-Z][a-z]+/);
+      var tenant = isVacant ? 'Vacant' : (tenantM ? tenantM[0] : '');
+
+      if (!unitMix[type]) unitMix[type] = { type: type, count: 0, sf: sf, rents: [], vacantCount: 0, tenants: [], leaseStarts: [], leaseEnds: [] };
+      unitMix[type].count++;
+      if (rent > 0) unitMix[type].rents.push(rent);
+      if (isVacant) unitMix[type].vacantCount++;
+      if (tenant) unitMix[type].tenants.push(tenant);
+      if (leaseStart) unitMix[type].leaseStarts.push(leaseStart);
+      if (leaseEnd) unitMix[type].leaseEnds.push(leaseEnd);
+    });
+
+    // Build rows array: header + one row per unit type
+    var rows = [['Unit Type', 'Units', 'Sq Ft', 'Avg Rent', 'Vacancy', 'Sample Tenant', 'Lease Start', 'Lease End']];
+    Object.values(unitMix).forEach(function(um) {
+      var avgRent = um.rents.length > 0 ? Math.round(um.rents.reduce(function(a,b){return a+b;},0)/um.rents.length) : 0;
+      rows.push([
+        um.type,
+        um.count,
+        um.sf || '',
+        avgRent || '',
+        um.vacantCount,
+        um.tenants[0] || '',
+        um.leaseStarts[0] || '',
+        um.leaseEnds[0] || ''
+      ]);
     });
     return rows;
   }
@@ -5255,15 +5509,16 @@ renderPastOMs();
       }
       return -1;
     }
-    var colUnit = findCol('unit', '#', 'type');
-    var colTenant = findCol('tenant', 'resident', 'name', 'lessee');
+    var colUnit = findCol('unit', 'type', '#');
+    var colCount = findCol('units', 'count', 'qty', 'number');
+    var colTenant = findCol('tenant', 'resident', 'name', 'lessee', 'sample');
     var colStart = findCol('start', 'begin', 'from', 'commence');
-    var colEnd = findCol('end', 'expire', 'expir', 'to', 'thru');
-    var colRent = findCol('rent', 'monthly', 'amount');
-    var colSqft = findCol('sqft', 'sf', 'sq ft', 'square');
+    var colEnd = findCol('end', 'expire', 'expir', 'thru');
+    var colRent = findCol('rent', 'monthly', 'amount', 'avg rent', 'rate');
+    var colSqft = findCol('sqft', 'sf', 'sq ft', 'square', 'size');
     var colVacancy = findCol('vacant', 'vacancy', 'status', 'occupied');
 
-    // Fallback positional mapping if headers unrecognized
+    // Fallback positional mapping
     if (colUnit === -1) colUnit = 0;
     if (colRent === -1) colRent = Math.min(3, headers.length - 1);
     if (colSqft === -1) colSqft = Math.min(2, headers.length - 1);
@@ -5273,45 +5528,70 @@ renderPastOMs();
     rows.slice(1).forEach(function(cols) {
       if (!cols || cols.length < 2) return;
       var unit = colUnit >= 0 ? (cols[colUnit]||'').toString().trim() : '';
+      var unitCount = colCount >= 0 ? parseInt((cols[colCount]||'').toString()) || 1 : 1;
       var tenant = colTenant >= 0 ? (cols[colTenant]||'').toString().trim() : '';
       var leaseStart = colStart >= 0 ? (cols[colStart]||'').toString().trim() : '';
       var leaseEnd = colEnd >= 0 ? (cols[colEnd]||'').toString().trim() : '';
       var rent = colRent >= 0 ? (cols[colRent]||'').toString().replace(/[^0-9.]/g,'') : '';
       var sqft = colSqft >= 0 ? (cols[colSqft]||'').toString().replace(/[^0-9.]/g,'') : '';
-      var vacancy = colVacancy >= 0 ? (cols[colVacancy]||'').toString().trim() : '';
+      var vacancy = colVacancy >= 0 ? parseInt((cols[colVacancy]||'').toString()) || 0 : 0;
       if (!unit && !rent) return;
 
       var tr = document.createElement('tr');
-      // Use unit type + tenant info as unit-type label; map rent and sqft to table columns
-      var displayLabel = unit + (tenant ? ' – ' + tenant : '');
-      tr.innerHTML = '<td><input value="' + displayLabel.replace(/"/g,'') + '" class="unit-type" title="' + (leaseStart ? 'Lease: '+leaseStart+' – '+leaseEnd : '') + (vacancy ? ' | '+vacancy : '') + '"></td>' +
-        '<td><input type="number" value="1" class="unit-count" oninput="recalcMetrics()"></td>' +
+      var tooltip = (leaseStart ? 'Lease: ' + leaseStart + (leaseEnd ? ' – ' + leaseEnd : '') : '') +
+                    (tenant ? (leaseStart ? ' | ' : '') + 'Tenant: ' + tenant : '');
+      tr.innerHTML = '<td><input value="' + (unit||'').replace(/"/g,'&quot;') + '" class="unit-type" title="' + tooltip + '"></td>' +
+        '<td><input type="number" value="' + (unitCount||1) + '" class="unit-count" oninput="recalcMetrics()"></td>' +
         '<td><input type="number" value="' + (sqft||'') + '" class="unit-sqft"></td>' +
         '<td><input type="number" value="' + (rent||'') + '" class="unit-rent" oninput="recalcMetrics()"></td>';
       tbody.appendChild(tr);
-      parsed.push({ unit, tenant, leaseStart, leaseEnd, rent, sqft, vacancy });
+      parsed.push({ unit: unit, count: unitCount, tenant: tenant, leaseStart: leaseStart, leaseEnd: leaseEnd, rent: rent, sqft: sqft, vacancy: vacancy });
     });
 
     if (parsed.length === 0) {
-      rrStatus('⚠️ Data was found but no rows could be parsed. Check column headers match expected format.', true);
+      rrStatus('⚠️ Data found but no rows parsed. For PDF, ensure it is not a scanned image. Try CSV or XLSX for best results.', true);
       return;
     }
 
-    var vacantCount = parsed.filter(function(r) { return /vacant|empty|v$/i.test(r.vacancy); }).length;
-    var summary = '✓ Imported ' + parsed.length + ' unit' + (parsed.length !== 1 ? 's' : '') +
-      (vacantCount ? ' (' + vacantCount + ' vacant)' : '') + '. Review and adjust values as needed.';
+    var totalUnits = parsed.reduce(function(s,r){return s+(r.count||1);},0);
+    var totalVacant = parsed.reduce(function(s,r){return s+(r.vacancy||0);},0);
+    var totalRent = parsed.reduce(function(s,r){ var rAmt = parseFloat(r.rent)||0; var cnt = r.count||1; return s + rAmt*cnt; }, 0);
+    var summary = '✓ Imported ' + parsed.length + ' unit type' + (parsed.length !== 1 ? 's' : '') +
+      ' (' + totalUnits + ' total units' + (totalVacant ? ', ' + totalVacant + ' vacant' : '') + ')' +
+      (totalRent > 0 ? ' · Gross Rent: $' + Math.round(totalRent).toLocaleString() + '/mo' : '') +
+      '. Review and adjust as needed.';
     rrStatus(summary, false);
-    showGlobalStatus('Rent roll imported: ' + parsed.length + ' units');
+    showGlobalStatus('Rent roll imported: ' + totalUnits + ' units, $' + Math.round(totalRent).toLocaleString() + '/mo gross rent');
     if (typeof window.recalcMetrics === 'function') window.recalcMetrics();
   }
 
   // ---- T12 UPLOAD ----
+  function t12Status(msg, isError) {
+    var el = document.getElementById('t12Status');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.background = isError ? 'rgba(231,76,60,0.15)' : 'rgba(76,175,80,0.15)';
+    el.style.color = isError ? '#e74c3c' : '#4CAF50';
+    el.textContent = msg;
+  }
+
   window.handleT12Upload = function(input) {
     if (!input.files || !input.files[0]) return;
     var file = input.files[0];
     var ext = file.name.split('.').pop().toLowerCase();
     if (ext === 'xlsx' || ext === 'xls') {
       readXlsxFile(file, function(rows) { parseT12Rows(rows); });
+    } else if (ext === 'pdf') {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var text = extractPDFText(e.target.result);
+        if (!text || text.trim().length < 20) {
+          t12Status('⚠️ Could not extract text from this PDF (may be a scanned image). Try CSV or XLSX for best results.', true);
+          return;
+        }
+        parseFlatTextT12(text);
+      };
+      reader.readAsArrayBuffer(file);
     } else {
       var reader = new FileReader();
       reader.onload = function(e) { parseT12Rows(parseCSVRows(e.target.result)); };
@@ -5320,31 +5600,181 @@ renderPastOMs();
     input.value = '';
   };
 
-  function parseT12Rows(rows) {
-    if (rows.length < 2) return;
-    var isMonthly = rows[0].length > 3;
+  // Parse flat text from a PDF T12 into income/expense line items
+  function parseFlatTextT12(text) {
+    var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 1; });
+
+    // Keywords that mark section boundaries
+    var incomeKeywords = /^(income|revenue|gross rent|rental income|total income|operating income)/i;
+    var expenseKeywords = /^(expense|operating expense|total expense|deduction)/i;
+    var skipKeywords = /^(net operating|noi|total|page|date|property|month|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})/i;
+
+    // Well-known income line items
+    var knownIncome = /gross\s*rent|rental\s*(?:income|revenue)|laundry|parking|storage|late\s*fee|application|other\s*income|miscellaneous\s*income|vacancy\s*(?:loss|credit)|concession/i;
+    // Well-known expense line items
+    var knownExpense = /tax|insurance|maintenance|repair|management|utility|utilities|electric|gas|water|sewer|trash|landscap|lawn|snow|plowing|advertis|legal|accounting|janitorial|cleaning|pest|reserve|capital|payroll|salary|wage/i;
+
     var incomes = [], expenses = [], section = 'income';
+
+    lines.forEach(function(line) {
+      // Detect section switches
+      if (incomeKeywords.test(line) && !line.match(/\d{3,}/)) { section = 'income'; return; }
+      if (expenseKeywords.test(line) && !line.match(/\d{3,}/)) { section = 'expense'; return; }
+
+      // Extract numeric values from the line (handles $1,234.56 or 1234.56 patterns)
+      var numMatches = line.match(/[\$\(]?\s*[\d,]+(?:\.\d{1,2})?\s*[\)]?/g) || [];
+      var values = numMatches.map(function(v) {
+        var neg = /^\(/.test(v.trim()) || /\)$/.test(v.trim());
+        var n = parseFloat(v.replace(/[^0-9.]/g,'')) || 0;
+        return neg ? -n : n;
+      }).filter(function(v) { return v !== 0; });
+
+      if (values.length === 0) return;
+
+      // Extract label (text before the first number)
+      var labelMatch = line.match(/^([A-Za-z][A-Za-z\s\/\-&'\.]{2,50})/);
+      var label = labelMatch ? labelMatch[1].trim().replace(/\s+/g, ' ') : '';
+      if (!label || skipKeywords.test(label)) return;
+
+      // Skip summary/total lines
+      if (/^total\s/i.test(label) || /^net\s/i.test(label)) return;
+
+      // For monthly layouts (12+ numbers on a line), use last number if it looks like a total,
+      // otherwise sum the monthly values (skip the last one if it's a pre-computed total)
+      var annual;
+      if (values.length >= 12) {
+        // Last value is typically the annual total column
+        annual = values[values.length - 1];
+        // Sanity check: if sum of first 12 ≈ last value, use last value; else sum first 12
+        var sumFirst12 = values.slice(0, 12).reduce(function(a,b){return a+b;},0);
+        if (Math.abs(sumFirst12 - annual) / (Math.abs(annual) + 1) < 0.15) {
+          annual = annual; // use the pre-computed total
+        } else {
+          annual = sumFirst12;
+        }
+      } else if (values.length > 1) {
+        // Could be partial year or quarterly; sum all
+        annual = values.reduce(function(a,b){return a+b;},0);
+      } else {
+        annual = values[0];
+      }
+
+      annual = Math.round(annual);
+      if (annual === 0) return;
+
+      // Classify into income or expense based on section context and known keywords
+      var forceIncome = knownIncome.test(label);
+      var forceExpense = knownExpense.test(label);
+      var effectiveSection = forceIncome ? 'income' : (forceExpense ? 'expense' : section);
+
+      if (effectiveSection === 'income') {
+        incomes.push({ label: label, amount: Math.abs(annual) });
+      } else {
+        expenses.push({ label: label, amount: Math.abs(annual) });
+      }
+    });
+
+    // Deduplicate (sometimes PDF extraction creates duplicate lines)
+    function dedup(arr) {
+      var seen = {};
+      return arr.filter(function(item) {
+        var key = item.label.toLowerCase().slice(0, 20);
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+    }
+    incomes = dedup(incomes);
+    expenses = dedup(expenses);
+
+    if (incomes.length === 0 && expenses.length === 0) {
+      t12Status('⚠️ Could not identify income or expense line items. Check that the PDF has selectable text (not a scanned image).', true);
+      return;
+    }
+
+    applyT12Data(incomes, expenses);
+  }
+
+  function parseT12Rows(rows) {
+    if (!rows || rows.length < 2) {
+      t12Status('⚠️ No data found. Make sure the file has a header row and data rows.', true);
+      return;
+    }
+
+    var incomes = [], expenses = [], section = 'income';
+    // Determine if monthly layout: look at max column count in data rows
+    var maxCols = rows.reduce(function(m, r) { return Math.max(m, r.length); }, 0);
+    // Monthly if we have 13+ columns (label + 12 months) or 14+ (label + 12 months + total)
+    var isMonthly = maxCols >= 13;
+
     rows.slice(1).forEach(function(cols) {
       var label = (cols[0]||'').toString().trim();
       if (!label) return;
-      if (label.toLowerCase().match(/expense|operating/)) { section = 'expense'; return; }
-      if (label.toLowerCase().match(/income|revenue/)) { section = 'income'; return; }
-      var values = cols.slice(1).map(function(v) { return parseFloat((v||'').toString().replace(/[^0-9.\-]/g,'')) || 0; });
-      var annual = isMonthly ? values.reduce(function(s,v){return s+v;},0) : (values[0]||0);
-      if (section === 'income') incomes.push({ label: label, amount: Math.round(annual) });
-      else expenses.push({ label: label, amount: Math.round(annual) });
+
+      var lc = label.toLowerCase();
+      // Section markers
+      if (lc.match(/^(?:operating\s+)?expense/)) { section = 'expense'; return; }
+      if (lc.match(/^(?:total\s+)?income|^revenue/)) { section = 'income'; return; }
+      // Skip total/NOI summary rows
+      if (lc.match(/^(?:total|net\s+operating|noi|gross\s+(?:income|revenue))/)) return;
+
+      // Parse numeric values from columns 1..end
+      var values = [];
+      for (var i = 1; i < cols.length; i++) {
+        var raw = (cols[i]||'').toString().replace(/[^0-9.\-]/g,'');
+        var v = parseFloat(raw) || 0;
+        values.push(v);
+      }
+      if (values.length === 0) return;
+
+      var annual;
+      if (isMonthly && values.length >= 12) {
+        // If last column is close to sum of 12 months, it's the annual total column
+        var sumMonths = values.slice(0, 12).reduce(function(a,b){return a+b;},0);
+        var lastVal = values[values.length - 1];
+        if (values.length >= 13 && Math.abs(sumMonths - lastVal) / (Math.abs(lastVal) + 1) < 0.15) {
+          annual = lastVal;
+        } else {
+          annual = sumMonths;
+        }
+      } else {
+        annual = values[0] || values.reduce(function(a,b){return a+b;},0);
+      }
+
+      annual = Math.round(annual);
+      if (annual === 0) return;
+
+      if (section === 'income') incomes.push({ label: label, amount: Math.abs(annual) });
+      else expenses.push({ label: label, amount: Math.abs(annual) });
     });
+
+    applyT12Data(incomes, expenses);
+  }
+
+  function applyT12Data(incomes, expenses) {
     if (incomes.length > 0) {
       var totalIncome = incomes.reduce(function(s,i){return s+i.amount;},0);
       var el = document.getElementById('curTotalIncome');
       if (el) el.value = totalIncome;
     }
-    if (expenses.length > 0 && typeof window.curExpenses !== 'undefined') {
-      window.curExpenses = expenses;
-      if (typeof window.renderExpenseRows === 'function') window.renderExpenseRows('cur');
+    if (expenses.length > 0) {
+      if (typeof window.curExpenses !== 'undefined') {
+        window.curExpenses = expenses;
+        if (typeof window.renderExpenseRows === 'function') window.renderExpenseRows('cur');
+      }
     }
     if (typeof window.calcNOI === 'function') window.calcNOI('cur');
-    showGlobalStatus('T12 imported: ' + incomes.length + ' income, ' + expenses.length + ' expense lines');
+
+    var totalIncome = incomes.reduce(function(s,i){return s+i.amount;},0);
+    var totalExpense = expenses.reduce(function(s,e){return s+e.amount;},0);
+    var noi = totalIncome - totalExpense;
+    var summary = '✓ T12 imported: ' + incomes.length + ' income line' + (incomes.length !== 1 ? 's' : '') +
+      ' ($' + totalIncome.toLocaleString() + '), ' +
+      expenses.length + ' expense line' + (expenses.length !== 1 ? 's' : '') +
+      ' ($' + totalExpense.toLocaleString() + ')' +
+      (noi !== 0 ? ' · NOI: $' + noi.toLocaleString() : '');
+    t12Status(summary, false);
+    showGlobalStatus('T12 imported: income $' + totalIncome.toLocaleString() + ', expenses $' + totalExpense.toLocaleString());
   }
 
   // ---- EMPLOYERS AUTO-POPULATE ----
