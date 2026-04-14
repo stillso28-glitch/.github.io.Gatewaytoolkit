@@ -2431,18 +2431,18 @@ async function drawResidentialNewListing(canvas, ctx) {
           var agImg = await loadImageAsync(ag.photo);
           ctx.save();
           ctx.beginPath();
-          ctx.arc(agX + 40, agentY + 40, 40, 0, Math.PI * 2);
+          ctx.arc(agX + 54, agentY + 54, 54, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(agImg, agX, agentY, 80, 80);
+          ctx.drawImage(agImg, agX, agentY, 108, 108);
           ctx.restore();
           ctx.strokeStyle = '#C8A84B';
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.arc(agX + 40, agentY + 40, 40, 0, Math.PI * 2);
+          ctx.arc(agX + 54, agentY + 54, 54, 0, Math.PI * 2);
           ctx.stroke();
         } catch(e) {}
       }
-      var tX = ag.photo ? agX + 96 : agX;
+      var tX = ag.photo ? agX + 122 : agX;
       ctx.font = '700 29px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
       ctx.fillText(ag.name, tX, agentY + 29);
@@ -2451,7 +2451,7 @@ async function drawResidentialNewListing(canvas, ctx) {
       if (ag.title) ctx.fillText(ag.title, tX, agentY + 56);
       if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 82);
       if (ag.email) { ctx.font = '400 20px "Montserrat"'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 106); }
-      if (ag.license) { ctx.font = '400 18px "Montserrat"'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 128); }
+      if (ag.license) { ctx.font = '400 18px "Montserrat"'; ctx.fillStyle = pal.logoKey === 'dark' ? '#5a4832' : '#B8CED8'; ctx.fillText('Lic. ' + ag.license, tX, agentY + 128); }
     }
     agentY += 118;
   }
@@ -2558,18 +2558,18 @@ async function drawResidentialJustSold(canvas, ctx) {
           var agImg = await loadImageAsync(ag.photo);
           ctx.save();
           ctx.beginPath();
-          ctx.arc(agX + 38, agentY + 38, 38, 0, Math.PI * 2);
+          ctx.arc(agX + 52, agentY + 52, 52, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(agImg, agX, agentY, 76, 76);
+          ctx.drawImage(agImg, agX, agentY, 104, 104);
           ctx.restore();
           ctx.strokeStyle = '#A2B6C0';
           ctx.lineWidth = 2.5;
           ctx.beginPath();
-          ctx.arc(agX + 38, agentY + 38, 38, 0, Math.PI * 2);
+          ctx.arc(agX + 52, agentY + 52, 52, 0, Math.PI * 2);
           ctx.stroke();
         } catch(e) {}
       }
-      var tX = ag.photo ? agX + 90 : agX;
+      var tX = ag.photo ? agX + 118 : agX;
       ctx.font = '700 27px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
       ctx.textAlign = 'left';
@@ -2579,7 +2579,7 @@ async function drawResidentialJustSold(canvas, ctx) {
       if (ag.title) ctx.fillText(ag.title, tX, agentY + 53);
       if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 78);
       if (ag.email) { ctx.font = '400 19px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 101); }
-      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 122); }
+      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.logoKey === 'dark' ? '#5a4832' : '#B8CED8'; ctx.fillText('Lic. ' + ag.license, tX, agentY + 122); }
     }
     agentY += 112;
   }
@@ -2624,18 +2624,18 @@ async function drawResAgentStrip(ctx, pal, startY, W, H) {
           var agImg = await loadImageAsync(ag.photo);
           ctx.save();
           ctx.beginPath();
-          ctx.arc(agX + 38, agentY + 38, 38, 0, Math.PI * 2);
+          ctx.arc(agX + 52, agentY + 52, 52, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(agImg, agX, agentY, 76, 76);
+          ctx.drawImage(agImg, agX, agentY, 104, 104);
           ctx.restore();
           ctx.strokeStyle = '#C8A84B';
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.arc(agX + 38, agentY + 38, 38, 0, Math.PI * 2);
+          ctx.arc(agX + 52, agentY + 52, 52, 0, Math.PI * 2);
           ctx.stroke();
         } catch(e) {}
       }
-      var tX = ag.photo ? agX + 88 : agX;
+      var tX = ag.photo ? agX + 118 : agX;
       ctx.font = '700 27px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
       ctx.fillText(ag.name, tX, agentY + 27);
@@ -2644,9 +2644,9 @@ async function drawResAgentStrip(ctx, pal, startY, W, H) {
       if (ag.title) ctx.fillText(ag.title, tX, agentY + 53);
       if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 78);
       if (ag.email) { ctx.font = '400 19px Montserrat'; ctx.fillText(ag.email, tX, agentY + 101); }
-      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag.license, tX, agentY + 122); }
+      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.logoKey === 'dark' ? '#5a4832' : '#B8CED8'; ctx.fillText('Lic. ' + ag.license, tX, agentY + 122); }
     }
-    agentY += 130;
+    agentY += 142;
   }
   // Logo centered below agents
   try {
@@ -3285,16 +3285,16 @@ async function drawJustSoldTemplate(canvas, ctx) {
         var agImg3 = await loadImageAsync(ag3.photo);
         ctx.save();
         ctx.beginPath();
-        ctx.arc(60 + 32, fY + 32, 32, 0, Math.PI * 2);
+        ctx.arc(60 + 46, fY + 46, 46, 0, Math.PI * 2);
         ctx.clip();
-        ctx.drawImage(agImg3, 60, fY, 64, 64);
+        ctx.drawImage(agImg3, 60, fY, 92, 92);
         ctx.restore();
         ctx.strokeStyle = GOLD;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(60 + 32, fY + 32, 32, 0, Math.PI * 2);
+        ctx.arc(60 + 46, fY + 46, 46, 0, Math.PI * 2);
         ctx.stroke();
-        photoOffsetX = 78;
+        photoOffsetX = 106;
       } catch(e3) {}
     }
     var ftX = 60 + photoOffsetX;
@@ -3550,18 +3550,18 @@ async function drawCommercialTemplate(canvas, ctx, templateName) {
           var agImg2 = await loadImageAsync(ag2.photo);
           ctx.save();
           ctx.beginPath();
-          ctx.arc(agX2 + 32, agentY + 32, 32, 0, Math.PI * 2);
+          ctx.arc(agX2 + 46, agentY + 46, 46, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(agImg2, agX2, agentY, 64, 64);
+          ctx.drawImage(agImg2, agX2, agentY, 92, 92);
           ctx.restore();
           ctx.strokeStyle = accent;
           ctx.lineWidth = 2.5;
           ctx.beginPath();
-          ctx.arc(agX2 + 32, agentY + 32, 32, 0, Math.PI * 2);
+          ctx.arc(agX2 + 46, agentY + 46, 46, 0, Math.PI * 2);
           ctx.stroke();
         } catch(e2) {}
       }
-      var tX2 = ag2.photo ? agX2 + 76 : agX2;
+      var tX2 = ag2.photo ? agX2 + 106 : agX2;
       ctx.font = '700 23px "Montserrat", sans-serif';
       ctx.fillStyle = pal.text;
       ctx.textAlign = 'left';
@@ -3572,7 +3572,7 @@ async function drawCommercialTemplate(canvas, ctx, templateName) {
       ctx.fillStyle = pal.accent;
       if (ag2.phone)   ctx.fillText(ag2.phone,   tX2, agentY + 65);
       if (ag2.email) { ctx.font = '400 16px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag2.email, tX2, agentY + 84); }
-      if (ag2.license) { ctx.font = '400 15px Montserrat'; ctx.fillStyle = pal.label; ctx.fillText('Lic. ' + ag2.license, tX2, agentY + 102); }
+      if (ag2.license) { ctx.font = '400 15px Montserrat'; ctx.fillStyle = pal.logoKey === 'dark' ? '#5a4832' : '#B8CED8'; ctx.fillText('Lic. ' + ag2.license, tX2, agentY + 102); }
     }
   }
 
