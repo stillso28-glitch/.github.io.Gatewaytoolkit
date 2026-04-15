@@ -392,20 +392,44 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   font-size: 12px;
 }
 .agent-photo-upload {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+  width: 110px;
+  min-width: 110px;
+  height: 145px;
+  border-radius: 10px;
   background: var(--card-bg);
-  border: 2px dashed var(--input-border);
+  border: 2px dashed #4a7a9a;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   overflow: hidden;
-  margin-bottom: 8px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.agent-photo-upload:hover {
+  border-color: #C8A84B;
 }
 .agent-photo-upload img {
-  width: 100%; height: 100%; object-fit: cover;
+  width: 100%; height: 100%; object-fit: cover; object-position: top;
+}
+.agent-photo-upload .upload-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  user-select: none;
+}
+.agent-photo-upload .upload-hint span.icon {
+  font-size: 32px;
+}
+.agent-photo-upload .upload-hint span.label {
+  font-size: 11px;
+  color: #7aA4B8;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 6px;
 }
 
 /* Buttons */
@@ -2265,7 +2289,7 @@ function renderSocialAgents() {
       <button class="remove-agent" onclick="removeSocialAgent(${i})" title="Remove">&times;</button>
       <div style="display:flex; gap:12px; align-items:flex-start;">
         <div class="agent-photo-upload" onclick="document.getElementById('sm-agent-photo-${i}').click()">
-          ${a.photo ? '<img src="'+a.photo+'">' : '<span style="color:var(--brand-gray);font-size:20px">👤</span>'}
+          ${a.photo ? '<img src="'+a.photo+'">' : '<div class="upload-hint"><span class="icon">👤</span><span class="label">Click to upload<br>agent photo</span></div>'}
           <input type="file" id="sm-agent-photo-${i}" accept="image/*,.heic,.HEIC" style="display:none" onchange="handleSocialAgentPhoto(${i}, this)">
         </div>
         <div class="agent-fields" style="flex:1">
