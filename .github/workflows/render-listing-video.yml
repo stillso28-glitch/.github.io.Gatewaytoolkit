@@ -1,0 +1,65 @@
+name: Render Listing Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      output_slug:
+        description: 'Output filename (no .mp4)'
+        required: true
+        type: string
+      composition_path:
+        description: 'Repo-relative path to composition HTML'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install FFmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Install HyperFrames CLI
+        run: npm install -g hyperframes
+
+      - name: Build render project
+        run: |
+          mkdir -p /tmp/hf-render
+          cp "${{ github.workspace }}/${{ inputs.composition_path }}" /tmp/hf-render/index.html
+          cd /tmp/hf-render
+          npm init -y
+          npm install gsap
+          npx puppeteer browsers install chrome
+
+      - name: Render to MP4
+        run: |
+          mkdir -p "${{ github.workspace }}/renders"
+          npx hyperframes render /tmp/hf-render \
+            --quality high \
+            --fps 30 \
+            --output "${{ github.workspace }}/renders/${{ inputs.output_slug }}.mp4"
+
+      - name: Commit MP4 and remove composition
+        run: |
+          cd "${{ github.workspace }}"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git add "renders/${{ inputs.output_slug }}.mp4"
+          git rm --ignore-unmatch "${{ inputs.composition_path }}"
+          git commit -m "Rendered video: ${{ inputs.output_slug }}"
+          git push
