@@ -1176,6 +1176,35 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
 }
 .vid-fmt-tab:hover { border-color: rgba(200,168,75,0.5); color: #C8A84B; }
 .vid-fmt-tab.active { border-color: #C8A84B; color: #C8A84B; background: rgba(200,168,75,0.08); }
+.vid-thumb { cursor: grab; position: relative; }
+.vid-thumb.drag-over { outline: 2px dashed #C8A84B; outline-offset: 2px; }
+.vid-thumb.dragging { opacity: 0.35; }
+.vid-scene-num {
+  position: absolute; top: 4px; left: 4px;
+  background: rgba(200,168,75,0.85); color: #152229;
+  font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+}
+.vid-upload-btn {
+  padding: 5px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; font-weight: 600;
+  color: var(--brand-gray);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.vid-upload-btn:hover { border-color: #C8A84B; color: #C8A84B; }
+.vid-agent-photo-wrap {
+  width: 38px; height: 38px; border-radius: 50%;
+  overflow: hidden; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;
+}
+.vid-agent-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.vid-media-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vid-file-name { font-size: 10px; color: var(--brand-gray); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vid-file-clear { font-size: 10px; color: var(--brand-gray); cursor: pointer; flex-shrink: 0; }
+.vid-file-clear:hover { color: #EF9A9A; }
 </style>
 </head>
 <body>
@@ -2351,6 +2380,24 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
         <div class="form-row"><label>Street Address</label><input type="text" id="vid-address" placeholder="e.g. 3100 Nebraska Street" oninput="vidUpdatePreview()"></div>
         <div class="form-row"><label>City, State</label><input type="text" id="vid-city" placeholder="e.g. Sioux City, IA" oninput="vidUpdatePreview()"></div>
         <div class="form-row"><label>Agent Name(s)</label><input type="text" id="vid-agents" placeholder="e.g. Daniel Stillson" oninput="vidUpdatePreview()"></div>
+        <div class="form-row">
+          <label>Agent Photo <span style="font-size:10px;font-weight:400;color:var(--brand-gray)">(close card)</span></label>
+          <div class="vid-media-row">
+            <button class="vid-upload-btn" onclick="document.getElementById('vid-agent-photo-input').click()">+ Upload</button>
+            <input type="file" id="vid-agent-photo-input" accept="image/*" style="display:none" onchange="vidHandleAgentPhoto(this.files[0])">
+            <div class="vid-agent-photo-wrap" id="vid-agent-photo-wrap" style="display:none"><img id="vid-agent-photo-img" src="" alt=""></div>
+            <span class="vid-file-clear" id="vid-agent-photo-clear" style="display:none" onclick="vidClearAgentPhoto()">✕ Remove</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Background Music <span style="font-size:10px;font-weight:400;color:var(--brand-gray)">(MP3/M4A)</span></label>
+          <div class="vid-media-row">
+            <button class="vid-upload-btn" onclick="document.getElementById('vid-music-input').click()">+ Upload</button>
+            <input type="file" id="vid-music-input" accept="audio/mpeg,audio/mp3,audio/m4a,audio/*" style="display:none" onchange="vidHandleMusicFile(this.files[0])">
+            <span class="vid-file-name" id="vid-music-name"></span>
+            <span class="vid-file-clear" id="vid-music-clear" style="display:none" onclick="vidClearMusic()">✕ Remove</span>
+          </div>
+        </div>
       </div>
 
       <!-- === LISTING PROMO fields === -->
@@ -8693,6 +8740,9 @@ window.initHomeValuation = initHomeValuation;
 
   /* ── STATE ─────────────────────────────────────────────────────── */
   var vidPhotos      = [];
+  var vidAgentPhoto  = null; // { dataUrl, name }
+  var vidMusicFile   = null; // { dataUrl, name, ext }
+  var vidDragIdx     = null;
   var vidCurrentTpl  = 'listing';
   var vidCurrentFmt  = '16:9';
   var vidType        = 'residential';
@@ -8765,9 +8815,30 @@ window.initHomeValuation = initHomeValuation;
     vidPhotos.forEach(function(p, i){
       var d = document.createElement('div');
       d.className = 'vid-thumb';
-      d.innerHTML = '<img src="' + p.dataUrl + '" alt=""><button class="thumb-remove" onclick="vidRemovePhoto('+i+')">✕</button>';
+      d.draggable = true;
+      d.dataset.idx = i;
+      d.innerHTML = '<img src="'+p.dataUrl+'" alt="">'
+        + '<span class="vid-scene-num">'+(i+1)+'</span>'
+        + '<button class="thumb-remove" onclick="vidRemovePhoto('+i+')">✕</button>';
+      d.addEventListener('dragstart', function(){ vidDragIdx=i; d.classList.add('dragging'); });
+      d.addEventListener('dragend',   function(){ vidDragIdx=null; document.querySelectorAll('.vid-thumb').forEach(function(t){ t.classList.remove('dragging','drag-over'); }); });
+      d.addEventListener('dragover',  function(e){ e.preventDefault(); d.classList.add('drag-over'); });
+      d.addEventListener('dragleave', function(){ d.classList.remove('drag-over'); });
+      d.addEventListener('drop',      function(e){
+        e.preventDefault(); d.classList.remove('drag-over');
+        if (vidDragIdx === null || vidDragIdx === i) return;
+        var moved = vidPhotos.splice(vidDragIdx, 1)[0];
+        vidPhotos.splice(i, 0, moved);
+        vidRenderThumbs(); vidRenderScenePreview();
+      });
       c.appendChild(d);
     });
+    if (vidPhotos.length > 1) {
+      var hint = document.createElement('p');
+      hint.style.cssText = 'font-size:10px;color:var(--brand-gray);margin-top:4px;width:100%';
+      hint.textContent = 'Drag to reorder · number = scene order';
+      c.appendChild(hint);
+    }
   }
 
   window.vidRemovePhoto = function(i){
@@ -8783,6 +8854,46 @@ window.initHomeValuation = initHomeValuation;
     dz.addEventListener('dragleave', function(){ dz.classList.remove('drag-over'); });
     dz.addEventListener('drop',      function(e){ e.preventDefault(); dz.classList.remove('drag-over'); vidHandleFiles(e.dataTransfer.files); });
   })();
+
+  /* ── AGENT PHOTO ───────────────────────────────────────────────── */
+  window.vidHandleAgentPhoto = function(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      vidAgentPhoto = { dataUrl: e.target.result, name: file.name };
+      document.getElementById('vid-agent-photo-img').src = e.target.result;
+      document.getElementById('vid-agent-photo-wrap').style.display = '';
+      document.getElementById('vid-agent-photo-clear').style.display = '';
+      vidRenderScenePreview();
+    };
+    reader.readAsDataURL(file);
+  };
+  window.vidClearAgentPhoto = function() {
+    vidAgentPhoto = null;
+    document.getElementById('vid-agent-photo-wrap').style.display = 'none';
+    document.getElementById('vid-agent-photo-clear').style.display = 'none';
+    document.getElementById('vid-agent-photo-input').value = '';
+    vidRenderScenePreview();
+  };
+
+  /* ── MUSIC FILE ────────────────────────────────────────────────── */
+  window.vidHandleMusicFile = function(file) {
+    if (!file) return;
+    var ext = file.name.split('.').pop().toLowerCase();
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      vidMusicFile = { dataUrl: e.target.result, name: file.name, ext: ext };
+      document.getElementById('vid-music-name').textContent = file.name;
+      document.getElementById('vid-music-clear').style.display = '';
+    };
+    reader.readAsDataURL(file);
+  };
+  window.vidClearMusic = function() {
+    vidMusicFile = null;
+    document.getElementById('vid-music-name').textContent = '';
+    document.getElementById('vid-music-clear').style.display = 'none';
+    document.getElementById('vid-music-input').value = '';
+  };
 
   /* ── SCENE PREVIEW ──────────────────────────────────────────────── */
   function vidRenderScenePreview() {
@@ -8944,8 +9055,9 @@ window.initHomeValuation = initHomeValuation;
     return s;
   }
   // Agent close HTML
-  function agentScene(logoS, agents) {
+  function agentScene(logoS, agents, agentPhoto) {
     return '<div class="scene sc-agent" id="sc-agent">'
+      +(agentPhoto ? '<img class="ap" id="ap" src="'+agentPhoto+'" alt="Agent">' : '')
       +'<img class="alog" id="alog" src="'+logoS+'" alt="Gateway">'
       +'<div class="acta" id="acta">Schedule a Showing</div>'
       +'<div class="aname" id="aname">'+esc(agents)+'</div>'
@@ -8954,14 +9066,16 @@ window.initHomeValuation = initHomeValuation;
       +'</div>\n';
   }
   // Agent timeline commands
-  function agentTL(t) {
+  function agentTL(t, hasPhoto) {
+    var off = hasPhoto ? 0.8 : 0;
     return '\n  .set("#sc-agent",{opacity:1},'+t.toFixed(2)+')'
       +xfi(t)
-      +'\n  .to("#alog",{opacity:1,duration:0.9},'+(t+0.5).toFixed(2)+')'
-      +'\n  .to("#acta",{opacity:1,y:0,duration:1.0,ease:"power3.out"},'+(t+1.3).toFixed(2)+')'
-      +'\n  .to("#aname",{opacity:1,duration:0.7},'+(t+2.2).toFixed(2)+')'
-      +'\n  .to("#abrok",{opacity:1,duration:0.6},'+(t+2.8).toFixed(2)+')'
-      +'\n  .to("#atag",{opacity:1,duration:0.5},'+(t+3.3).toFixed(2)+');';
+      +(hasPhoto ? '\n  .to("#ap",{opacity:1,duration:0.8},'+(t+0.4).toFixed(2)+')' : '')
+      +'\n  .to("#alog",{opacity:1,duration:0.9},'+(t+0.5+off).toFixed(2)+')'
+      +'\n  .to("#acta",{opacity:1,y:0,duration:1.0,ease:"power3.out"},'+(t+1.3+off).toFixed(2)+')'
+      +'\n  .to("#aname",{opacity:1,duration:0.7},'+(t+2.2+off).toFixed(2)+')'
+      +'\n  .to("#abrok",{opacity:1,duration:0.6},'+(t+2.8+off).toFixed(2)+')'
+      +'\n  .to("#atag",{opacity:1,duration:0.5},'+(t+3.3+off).toFixed(2)+');';
   }
 
   // Shared CSS for stats + agent scenes
@@ -8971,6 +9085,7 @@ window.initHomeValuation = initHomeValuation;
     var ctaS=isV?'46px':isS?'42px':'62px';
     var logW=isV?'220px':isS?'200px':'280px';
     var namS=isV?'32px':'40px';
+    var apSz=isV?'120px':isS?'120px':'160px';
     return '.sc-stats{background:#0D1117;display:flex;align-items:center;justify-content:center}\n'
       +'.si{display:flex;align-items:center}\n'
       +'.sb{text-align:center;padding:0 '+spH+'}\n'
@@ -8982,7 +9097,8 @@ window.initHomeValuation = initHomeValuation;
       +'.acta{font-size:'+ctaS+';font-weight:200;color:#F5F5F3;opacity:0;transform:translateY(18px)}\n'
       +'.aname{font-size:'+namS+';font-weight:300;color:#F5F5F3;margin-top:28px;opacity:0}\n'
       +'.abrok{font-size:13px;font-weight:400;letter-spacing:4px;text-transform:uppercase;color:rgba(245,245,243,0.45);margin-top:10px;opacity:0}\n'
-      +'.atag{font-size:12px;font-weight:400;letter-spacing:3px;text-transform:uppercase;color:rgba(245,245,243,0.28);margin-top:16px;opacity:0}\n';
+      +'.atag{font-size:12px;font-weight:400;letter-spacing:3px;text-transform:uppercase;color:rgba(245,245,243,0.28);margin-top:16px;opacity:0}\n'
+      +'.ap{width:'+apSz+';height:'+apSz+';border-radius:50%;object-fit:cover;border:2px solid rgba(245,245,243,0.2);opacity:0;margin-bottom:28px}\n';
   }
 
 
@@ -9034,8 +9150,8 @@ window.initHomeValuation = initHomeValuation;
       t+=dur;
     });
     tl+=statsTL(t,data.stats,statsD); t+=statsD;
-    tl+=agentTL(t);
-    return mkH(compId,totalD,W,H,css)+scenesH+statsScene(data.stats)+agentScene(logos.logoS,data.agents)+mkF(compId,tl);
+    tl+=agentTL(t, !!data.agentPhoto);
+    return mkH(compId,totalD,W,H,css)+scenesH+statsScene(data.stats)+agentScene(logos.logoS,data.agents,data.agentPhoto)+mkF(compId,tl);
   }
 
   /* ── JUST LISTED ───────────────────────────────────────────────── */
@@ -9070,7 +9186,7 @@ window.initHomeValuation = initHomeValuation;
             +(statLn?'<div class="hstat" id="hstat">'+esc(statLn)+'</div>':''):'')
         +'</div>\n';
     });
-    html+=statsScene(jlStats)+agentScene(logos.logoS,data.agents);
+    html+=statsScene(jlStats)+agentScene(logos.logoS,data.agents,data.agentPhoto);
     var tl='tl',t=0;
     tl+='\n  .set("#sc-t",{opacity:1},0)'+xfi(0)
       +'\n  .to("#jt-h",{opacity:1,y:0,duration:1.1,ease:"power3.out"},0.4)'
@@ -9089,7 +9205,7 @@ window.initHomeValuation = initHomeValuation;
       t+=dur;
     });
     tl+=statsTL(t,jlStats,statsD); t+=statsD;
-    tl+=agentTL(t);
+    tl+=agentTL(t, !!data.agentPhoto);
     return mkH(compId,totalD,W,H,css)+html+mkF(compId,tl);
   }
 
@@ -9143,6 +9259,7 @@ window.initHomeValuation = initHomeValuation;
           +'<div class="sl2" id="sl'+i+'">'+esc(s.lbl)+'</div></div>';
       }).join('')+'</div></div>\n';
     html+='<div class="scene sc-close" id="sc-close">'
+      +(data.agentPhoto ? '<img class="ap" id="ap" src="'+data.agentPhoto+'" alt="Agent">' : '')
       +'<div class="cl-q" id="cl-q">Thinking of Selling?</div>'
       +'<div class="cl-sub" id="cl-sub">Gateway Real Estate Advisors gets results.</div>'
       +'<div class="cl-name" id="cl-name">'+esc(data.agents)+'</div>'
@@ -9165,11 +9282,13 @@ window.initHomeValuation = initHomeValuation;
       t+=photoD;
     });
     tl+=statsTL(t,soldStats,statsD); t+=statsD;
+    var jsOff=data.agentPhoto?0.7:0;
     tl+='\n  .set("#sc-close",{opacity:1},'+t.toFixed(2)+')'+xfi(t)
-      +'\n  .to("#cl-q",{opacity:1,y:0,duration:1.0,ease:"power3.out"},'+(t+0.5).toFixed(2)+')'
-      +'\n  .to("#cl-sub",{opacity:1,duration:0.7},'+(t+1.5).toFixed(2)+')'
-      +'\n  .to("#cl-name",{opacity:1,duration:0.6},'+(t+2.2).toFixed(2)+')'
-      +'\n  .to("#cl-brok",{opacity:1,duration:0.5},'+(t+2.8).toFixed(2)+');';
+      +(data.agentPhoto?'\n  .to("#ap",{opacity:1,duration:0.8},'+(t+0.3).toFixed(2)+')':'')
+      +'\n  .to("#cl-q",{opacity:1,y:0,duration:1.0,ease:"power3.out"},'+(t+0.5+jsOff).toFixed(2)+')'
+      +'\n  .to("#cl-sub",{opacity:1,duration:0.7},'+(t+1.5+jsOff).toFixed(2)+')'
+      +'\n  .to("#cl-name",{opacity:1,duration:0.6},'+(t+2.2+jsOff).toFixed(2)+')'
+      +'\n  .to("#cl-brok",{opacity:1,duration:0.5},'+(t+2.8+jsOff).toFixed(2)+');';
     return mkH(compId,totalD,W,H,css)+html+mkF(compId,tl);
   }
 
@@ -9211,6 +9330,7 @@ window.initHomeValuation = initHomeValuation;
         +'</div>\n';
     });
     html+='<div class="scene close-sc" id="sc-close">'
+      +(data.agentPhoto ? '<img class="ap" id="ap" src="'+data.agentPhoto+'" alt="Agent">' : '')
       +'<div class="cl-addr" id="cl-addr">'+esc(data.addr)+'</div>'
       +'<div class="cl-when" id="cl-when">'+esc(data.ohDate+' · '+timeStr)+'</div>'
       +'<div class="cl-name" id="cl-name">'+esc(data.agents)+'</div>'
@@ -9230,11 +9350,13 @@ window.initHomeValuation = initHomeValuation;
       tl+=xfd(t+photoD-0.35)+'\n  .set("#sc'+i+'",{opacity:0},'+(t+photoD).toFixed(2)+')';
       t+=photoD;
     });
+    var ohOff=data.agentPhoto?0.7:0;
     tl+='\n  .set("#sc-close",{opacity:1},'+t.toFixed(2)+')'+xfi(t)
-      +'\n  .to("#cl-addr",{opacity:1,y:0,duration:1.0,ease:"power3.out"},'+(t+0.5).toFixed(2)+')'
-      +'\n  .to("#cl-when",{opacity:1,duration:0.7},'+(t+1.5).toFixed(2)+')'
-      +'\n  .to("#cl-name",{opacity:1,duration:0.6},'+(t+2.3).toFixed(2)+')'
-      +'\n  .to("#cl-brok",{opacity:1,duration:0.5},'+(t+2.9).toFixed(2)+');';
+      +(data.agentPhoto?'\n  .to("#ap",{opacity:1,duration:0.8},'+(t+0.3).toFixed(2)+')':'')
+      +'\n  .to("#cl-addr",{opacity:1,y:0,duration:1.0,ease:"power3.out"},'+(t+0.5+ohOff).toFixed(2)+')'
+      +'\n  .to("#cl-when",{opacity:1,duration:0.7},'+(t+1.5+ohOff).toFixed(2)+')'
+      +'\n  .to("#cl-name",{opacity:1,duration:0.6},'+(t+2.3+ohOff).toFixed(2)+')'
+      +'\n  .to("#cl-brok",{opacity:1,duration:0.5},'+(t+2.9+ohOff).toFixed(2)+');';
     return mkH(compId,totalD,W,H,css)+html+mkF(compId,tl);
   }
 
@@ -9268,7 +9390,7 @@ window.initHomeValuation = initHomeValuation;
         +'<div class="pg"></div>'
         +'</div>\n';
     });
-    html+=agentScene(logos.logoS,data.agents);
+    html+=agentScene(logos.logoS,data.agents,data.agentPhoto);
     var tl='tl',t=0;
     tl+='\n  .set("#sc-ann",{opacity:1},0)'+xfi(0)
       +'\n  .to("#pr-head",{opacity:1,y:0,duration:1.0,ease:"power3.out"},0.4)'
@@ -9283,7 +9405,7 @@ window.initHomeValuation = initHomeValuation;
       tl+=xfd(t+photoD-0.35)+'\n  .set("#sc'+i+'",{opacity:0},'+(t+photoD).toFixed(2)+')';
       t+=photoD;
     });
-    tl+=agentTL(t);
+    tl+=agentTL(t, !!data.agentPhoto);
     return mkH(compId,totalD,W,H,css)+html+mkF(compId,tl);
   }
 
@@ -9297,6 +9419,7 @@ window.initHomeValuation = initHomeValuation;
     var data={
       addr: city ? addr+', '+city : addr,
       agents: g('vid-agents')||'Gateway Real Estate Advisors',
+      agentPhoto: vidAgentPhoto ? vidAgentPhoto.dataUrl : null,
       price: g('vid-price'),
       stats: vidGetStats(),
       feat1:g('vid-feat1'),feat2:g('vid-feat2'),feat3:g('vid-feat3'),feat4:g('vid-feat4'),
@@ -9359,11 +9482,24 @@ window.initHomeValuation = initHomeValuation;
         body:JSON.stringify({message:'Add composition: '+comp.slug,content:b64,branch:branch})
       });
       if (!uploadRes.ok) { var ue=await uploadRes.json(); throw new Error('Upload failed: '+(ue.message||uploadRes.status)); }
+      var musicPath='';
+      if (vidMusicFile) {
+        vidSetStatus('uploading','Uploading music file to GitHub...');
+        var musicUpPath='compositions/pending/'+comp.slug+'-music.'+vidMusicFile.ext;
+        var musicB64=vidMusicFile.dataUrl.split(',')[1];
+        var musicUpRes=await fetch('https://api.github.com/repos/'+VID_REPO+'/contents/'+musicUpPath,{
+          method:'PUT',
+          headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+          body:JSON.stringify({message:'Add music: '+comp.slug,content:musicB64,branch:branch})
+        });
+        if (!musicUpRes.ok) { var me=await musicUpRes.json(); throw new Error('Music upload failed: '+(me.message||musicUpRes.status)); }
+        musicPath=musicUpPath;
+      }
       var triggerTime=new Date().toISOString();
       var dispatchRes=await fetch('https://api.github.com/repos/'+VID_REPO+'/actions/workflows/render-listing-video.yml/dispatches',{
         method:'POST',
         headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
-        body:JSON.stringify({ref:branch,inputs:{output_slug:comp.slug,composition_path:compPath}})
+        body:JSON.stringify({ref:branch,inputs:{output_slug:comp.slug,composition_path:compPath,music_path:musicPath}})
       });
       if (!dispatchRes.ok&&dispatchRes.status!==204) { var de=await dispatchRes.json(); throw new Error('Dispatch failed: '+(de.message||dispatchRes.status)); }
       vidSetStatus('rendering','Rendering on GitHub Actions... (~2 min)');

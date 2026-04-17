@@ -11,6 +11,11 @@ on:
         description: 'Repo-relative path to composition HTML'
         required: true
         type: string
+      music_path:
+        description: 'Repo-relative path to music file (optional)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -52,14 +57,34 @@ jobs:
           npx hyperframes render /tmp/hf-render \
             --quality high \
             --fps 30 \
-            --output "${{ github.workspace }}/renders/${{ inputs.output_slug }}.mp4"
+            --output "${{ github.workspace }}/renders/${{ inputs.output_slug }}_silent.mp4"
 
-      - name: Commit MP4 and remove composition
+      - name: Mix in background music
+        run: |
+          SILENT="${{ github.workspace }}/renders/${{ inputs.output_slug }}_silent.mp4"
+          FINAL="${{ github.workspace }}/renders/${{ inputs.output_slug }}.mp4"
+          MUSIC_PATH="${{ inputs.music_path }}"
+          if [ -n "$MUSIC_PATH" ] && [ -f "${{ github.workspace }}/$MUSIC_PATH" ]; then
+            ffmpeg -i "$SILENT" \
+                   -i "${{ github.workspace }}/$MUSIC_PATH" \
+                   -c:v copy -c:a aac -b:a 192k \
+                   -map 0:v:0 -map 1:a:0 \
+                   -af "afade=t=out:st=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$SILENT" | awk '{print int($1)-2}'):d=2,volume=0.75" \
+                   -shortest -y "$FINAL"
+            rm "$SILENT"
+          else
+            mv "$SILENT" "$FINAL"
+          fi
+
+      - name: Commit render and clean up
         run: |
           cd "${{ github.workspace }}"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "GitHub Actions"
           git add "renders/${{ inputs.output_slug }}.mp4"
           git rm --ignore-unmatch "${{ inputs.composition_path }}"
+          if [ -n "${{ inputs.music_path }}" ]; then
+            git rm --ignore-unmatch "${{ inputs.music_path }}"
+          fi
           git commit -m "Rendered video: ${{ inputs.output_slug }}"
           git push
