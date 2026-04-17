@@ -1137,6 +1137,29 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
 }
 .vid-alt-link a { color: var(--brand-gray); }
 .vid-alt-link a:hover { color: #C8A84B; }
+.vid-tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) { .vid-tpl-grid { grid-template-columns: repeat(3, 1fr); } }
+.vid-tpl-card {
+  background: var(--card-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 14px 10px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--text-primary);
+}
+.vid-tpl-card:hover { border-color: rgba(200,168,75,0.5); background: rgba(200,168,75,0.05); }
+.vid-tpl-card.active { border-color: #C8A84B; background: rgba(200,168,75,0.1); }
+.vid-tpl-icon { font-size: 22px; margin-bottom: 6px; }
+.vid-tpl-name { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+.vid-tpl-desc { font-size: 10px; color: var(--brand-gray); }
 </style>
 </head>
 <body>
@@ -2250,91 +2273,164 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
 
 <!-- ========== LISTING VIDEO GENERATOR ========== -->
 <div id="page-video" class="page">
+
+  <!-- Template Picker -->
+  <div class="vid-tpl-grid">
+    <button class="vid-tpl-card active" id="vtc-listing"    onclick="vidSelectTpl('listing',this)">
+      <div class="vid-tpl-icon">🏠</div>
+      <div class="vid-tpl-name">Listing Promo</div>
+      <div class="vid-tpl-desc">30s · 4 scenes</div>
+    </button>
+    <button class="vid-tpl-card" id="vtc-just-listed"   onclick="vidSelectTpl('just-listed',this)">
+      <div class="vid-tpl-icon">🔑</div>
+      <div class="vid-tpl-name">Just Listed</div>
+      <div class="vid-tpl-desc">15s · 3 scenes</div>
+    </button>
+    <button class="vid-tpl-card" id="vtc-open-house"    onclick="vidSelectTpl('open-house',this)">
+      <div class="vid-tpl-icon">📅</div>
+      <div class="vid-tpl-name">Open House</div>
+      <div class="vid-tpl-desc">20s · 3 scenes</div>
+    </button>
+    <button class="vid-tpl-card" id="vtc-price-reduced" onclick="vidSelectTpl('price-reduced',this)">
+      <div class="vid-tpl-icon">📉</div>
+      <div class="vid-tpl-name">Price Reduced</div>
+      <div class="vid-tpl-desc">15s · 3 scenes</div>
+    </button>
+    <button class="vid-tpl-card" id="vtc-just-sold"     onclick="vidSelectTpl('just-sold',this)">
+      <div class="vid-tpl-icon">🏆</div>
+      <div class="vid-tpl-name">Just Sold</div>
+      <div class="vid-tpl-desc">15s · 3 scenes</div>
+    </button>
+  </div>
+
   <div class="vid-layout">
 
     <!-- LEFT: Form -->
     <div class="vid-form-panel">
-      <h3 style="font-size:20px;margin-bottom:4px">Listing Video</h3>
-      <p style="font-size:12px;color:var(--brand-gray);margin-bottom:4px">Generate a branded 30-second property promo video</p>
+      <h3 id="vid-tpl-title" style="font-size:20px;margin-bottom:4px">Listing Promo</h3>
+      <p id="vid-tpl-subtitle" style="font-size:12px;color:var(--brand-gray);margin-bottom:4px">Branded 30-second property promo · 4 scenes</p>
 
-      <!-- Property Type -->
-      <div class="vid-type-tabs">
-        <button class="vid-type-tab active" onclick="vidSetType('residential',this)">Residential</button>
-        <button class="vid-type-tab" onclick="vidSetType('multifamily',this)">Multifamily</button>
-        <button class="vid-type-tab" onclick="vidSetType('commercial',this)">Commercial</button>
-      </div>
-
-      <!-- Photos -->
+      <!-- Photos (all templates) -->
       <div>
         <label style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--brand-gray);text-transform:uppercase;display:block;margin-bottom:8px">Property Photos <span style="color:var(--brand-gray);font-weight:400">(up to 6)</span></label>
         <div class="vid-photo-drop" id="vid-drop-zone">
           <input type="file" id="vid-photo-input" accept="image/*" multiple onchange="vidHandleFiles(this.files)">
           <div class="drop-icon">📷</div>
           <p>Drop photos here or click to upload</p>
-          <p style="font-size:11px;margin-top:4px;color:#5a7a8a">First photo = hero scene · Second = closing scene</p>
+          <p style="font-size:11px;margin-top:4px;color:#5a7a8a">First photo = hero · Second = closing scene</p>
         </div>
         <div class="vid-photo-thumbs" id="vid-thumbs"></div>
       </div>
 
-      <!-- Core Details -->
+      <!-- Common fields (all templates) -->
       <div class="form-section" style="margin:0">
         <h4 style="font-size:13px;margin-bottom:10px">Property Details</h4>
         <div class="form-row"><label>Street Address</label><input type="text" id="vid-address" placeholder="e.g. 3100 Nebraska Street" oninput="vidUpdatePreview()"></div>
         <div class="form-row"><label>City, State</label><input type="text" id="vid-city" placeholder="e.g. Sioux City, IA" oninput="vidUpdatePreview()"></div>
-        <div class="form-row"><label>Price / Ask</label><input type="text" id="vid-price" placeholder="e.g. $229,500" oninput="vidUpdatePreview()"></div>
-        <div class="form-row"><label>Agent Name(s)</label><input type="text" id="vid-agents" placeholder="e.g. Daniel Stillson &amp; Steph Dattolico" oninput="vidUpdatePreview()"></div>
+        <div class="form-row"><label>Agent Name(s)</label><input type="text" id="vid-agents" placeholder="e.g. Daniel Stillson" oninput="vidUpdatePreview()"></div>
       </div>
 
-      <!-- Residential Fields -->
-      <div class="form-section" id="vid-res-fields" style="margin:0">
-        <h4 style="font-size:13px;margin-bottom:10px">Residential Stats</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="form-row"><label>Bedrooms</label><input type="text" id="vid-beds" placeholder="3" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Bathrooms</label><input type="text" id="vid-baths" placeholder="1.5" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Sq Footage</label><input type="text" id="vid-sqft" placeholder="1,400 SF" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Year Built</label><input type="text" id="vid-year" placeholder="1978" oninput="vidUpdatePreview()"></div>
+      <!-- === LISTING PROMO fields === -->
+      <div id="vtf-listing">
+        <div class="form-section" style="margin:0">
+          <div class="form-row"><label>Price / Ask</label><input type="text" id="vid-price" placeholder="e.g. $229,500" oninput="vidUpdatePreview()"></div>
+        </div>
+        <div class="vid-type-tabs">
+          <button class="vid-type-tab active" onclick="vidSetType('residential',this)">Residential</button>
+          <button class="vid-type-tab" onclick="vidSetType('multifamily',this)">Multifamily</button>
+          <button class="vid-type-tab" onclick="vidSetType('commercial',this)">Commercial</button>
+        </div>
+        <div class="form-section" id="vid-res-fields" style="margin:0">
+          <h4 style="font-size:13px;margin-bottom:10px">Residential Stats</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-row"><label>Bedrooms</label><input type="text" id="vid-beds" placeholder="3" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Bathrooms</label><input type="text" id="vid-baths" placeholder="1.5" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Sq Footage</label><input type="text" id="vid-sqft" placeholder="1,400 SF" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Year Built</label><input type="text" id="vid-year" placeholder="1978" oninput="vidUpdatePreview()"></div>
+          </div>
+        </div>
+        <div class="form-section" id="vid-mf-fields" style="margin:0;display:none">
+          <h4 style="font-size:13px;margin-bottom:10px">Multifamily Stats</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-row"><label>Units</label><input type="text" id="vid-units" placeholder="24" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Cap Rate</label><input type="text" id="vid-cap" placeholder="6.5%" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>NOI</label><input type="text" id="vid-noi" placeholder="$148,000" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Occupancy</label><input type="text" id="vid-occ" placeholder="94%" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Price/Unit</label><input type="text" id="vid-ppu" placeholder="$75,000" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Sq Footage</label><input type="text" id="vid-mf-sqft" placeholder="18,500 SF" oninput="vidUpdatePreview()"></div>
+          </div>
+        </div>
+        <div class="form-section" id="vid-comm-fields" style="margin:0;display:none">
+          <h4 style="font-size:13px;margin-bottom:10px">Commercial Stats</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-row"><label>Building SF</label><input type="text" id="vid-bldg-sf" placeholder="12,500 SF" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Zoning</label><input type="text" id="vid-zoning" placeholder="C-2" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Cap Rate</label><input type="text" id="vid-comm-cap" placeholder="7.2%" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Lease Rate</label><input type="text" id="vid-lease-rate" placeholder="$14/SF NNN" oninput="vidUpdatePreview()"></div>
+            <div class="form-row" style="grid-column:1/-1"><label>Property Type</label><input type="text" id="vid-prop-type" placeholder="e.g. Retail Strip Center" oninput="vidUpdatePreview()"></div>
+          </div>
+        </div>
+        <div class="form-section" style="margin:0">
+          <h4 style="font-size:13px;margin-bottom:10px">Key Features <span style="font-size:11px;color:var(--brand-gray);font-weight:400">(up to 4)</span></h4>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <input type="text" id="vid-feat1" placeholder="e.g. Fully Renovated — Move-in ready" oninput="vidUpdatePreview()" style="font-size:12px">
+            <input type="text" id="vid-feat2" placeholder="e.g. Fully Furnished — Everything stays" oninput="vidUpdatePreview()" style="font-size:12px">
+            <input type="text" id="vid-feat3" placeholder="e.g. Proven Airbnb Income — Up to $4K/mo" oninput="vidUpdatePreview()" style="font-size:12px">
+            <input type="text" id="vid-feat4" placeholder="e.g. Turnkey Investment" oninput="vidUpdatePreview()" style="font-size:12px">
+          </div>
         </div>
       </div>
 
-      <!-- Multifamily Fields -->
-      <div class="form-section" id="vid-mf-fields" style="margin:0;display:none">
-        <h4 style="font-size:13px;margin-bottom:10px">Multifamily Stats</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="form-row"><label>Units</label><input type="text" id="vid-units" placeholder="24" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Cap Rate</label><input type="text" id="vid-cap" placeholder="6.5%" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>NOI</label><input type="text" id="vid-noi" placeholder="$148,000" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Occupancy</label><input type="text" id="vid-occ" placeholder="94%" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Price/Unit</label><input type="text" id="vid-ppu" placeholder="$75,000" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Sq Footage</label><input type="text" id="vid-mf-sqft" placeholder="18,500 SF" oninput="vidUpdatePreview()"></div>
+      <!-- === JUST LISTED fields === -->
+      <div id="vtf-just-listed" style="display:none">
+        <div class="form-section" style="margin:0">
+          <div class="form-row"><label>List Price</label><input type="text" id="vjl-price" placeholder="e.g. $229,500" oninput="vidUpdatePreview()"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-row"><label>Bedrooms</label><input type="text" id="vjl-beds" placeholder="3" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Bathrooms</label><input type="text" id="vjl-baths" placeholder="2" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Sq Footage</label><input type="text" id="vjl-sqft" placeholder="1,800 SF" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Year Built</label><input type="text" id="vjl-year" placeholder="2002" oninput="vidUpdatePreview()"></div>
+          </div>
+          <div class="form-row"><label>Tagline <span style="font-size:10px;font-weight:400">(optional)</span></label><input type="text" id="vjl-tagline" placeholder="e.g. Move-in ready in a sought-after neighborhood" oninput="vidUpdatePreview()"></div>
         </div>
       </div>
 
-      <!-- Commercial Fields -->
-      <div class="form-section" id="vid-comm-fields" style="margin:0;display:none">
-        <h4 style="font-size:13px;margin-bottom:10px">Commercial Stats</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="form-row"><label>Building SF</label><input type="text" id="vid-bldg-sf" placeholder="12,500 SF" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Zoning</label><input type="text" id="vid-zoning" placeholder="C-2" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Cap Rate</label><input type="text" id="vid-comm-cap" placeholder="7.2%" oninput="vidUpdatePreview()"></div>
-          <div class="form-row"><label>Lease Rate</label><input type="text" id="vid-lease-rate" placeholder="$14/SF NNN" oninput="vidUpdatePreview()"></div>
-          <div class="form-row" style="grid-column:1/-1"><label>Property Type</label><input type="text" id="vid-prop-type" placeholder="e.g. Retail Strip Center" oninput="vidUpdatePreview()"></div>
+      <!-- === OPEN HOUSE fields === -->
+      <div id="vtf-open-house" style="display:none">
+        <div class="form-section" style="margin:0">
+          <div class="form-row"><label>List Price</label><input type="text" id="voh-price" placeholder="e.g. $389,000" oninput="vidUpdatePreview()"></div>
+          <div class="form-row"><label>Event Date</label><input type="text" id="voh-date" placeholder="e.g. Saturday, May 10" oninput="vidUpdatePreview()"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-row"><label>Start Time</label><input type="text" id="voh-start" placeholder="1:00 PM" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>End Time</label><input type="text" id="voh-end" placeholder="3:00 PM" oninput="vidUpdatePreview()"></div>
+          </div>
+          <div class="form-row"><label>Agent Phone <span style="font-size:10px;font-weight:400">(optional)</span></label><input type="text" id="voh-phone" placeholder="e.g. (712) 555-0100" oninput="vidUpdatePreview()"></div>
         </div>
       </div>
 
-      <!-- Key Features -->
-      <div class="form-section" style="margin:0">
-        <h4 style="font-size:13px;margin-bottom:10px">Key Features <span style="font-size:11px;color:var(--brand-gray);font-weight:400">(up to 4)</span></h4>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <input type="text" id="vid-feat1" placeholder="e.g. Fully Renovated — Move-in ready" oninput="vidUpdatePreview()" style="font-size:12px">
-          <input type="text" id="vid-feat2" placeholder="e.g. Fully Furnished — Everything stays" oninput="vidUpdatePreview()" style="font-size:12px">
-          <input type="text" id="vid-feat3" placeholder="e.g. Proven Airbnb Income — Up to $4K/mo" oninput="vidUpdatePreview()" style="font-size:12px">
-          <input type="text" id="vid-feat4" placeholder="e.g. Turnkey Investment" oninput="vidUpdatePreview()" style="font-size:12px">
+      <!-- === PRICE REDUCED fields === -->
+      <div id="vtf-price-reduced" style="display:none">
+        <div class="form-section" style="margin:0">
+          <div class="form-row"><label>Original Price</label><input type="text" id="vpr-old" placeholder="e.g. $275,000" oninput="vidUpdatePreview()"></div>
+          <div class="form-row"><label>New Price</label><input type="text" id="vpr-new" placeholder="e.g. $249,900" oninput="vidUpdatePreview()"></div>
+          <div class="form-row"><label>Savings Tag <span style="font-size:10px;font-weight:400">(optional)</span></label><input type="text" id="vpr-save" placeholder="e.g. $25,100 price improvement" oninput="vidUpdatePreview()"></div>
+        </div>
+      </div>
+
+      <!-- === JUST SOLD fields === -->
+      <div id="vtf-just-sold" style="display:none">
+        <div class="form-section" style="margin:0">
+          <div class="form-row"><label>Sold Price</label><input type="text" id="vjs-sold" placeholder="e.g. $241,000" oninput="vidUpdatePreview()"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-row"><label>List Price</label><input type="text" id="vjs-list" placeholder="e.g. $229,500" oninput="vidUpdatePreview()"></div>
+            <div class="form-row"><label>Days on Market</label><input type="text" id="vjs-dom" placeholder="e.g. 6" oninput="vidUpdatePreview()"></div>
+          </div>
         </div>
       </div>
 
       <button class="vid-generate-btn" id="vid-gen-btn" onclick="vidRender()">&#127917; Render Video</button>
 
-      <!-- Status bar (shown during/after render) -->
+      <!-- Status bar -->
       <div class="vid-status-bar" id="vid-status-bar"></div>
 
       <!-- GitHub Settings -->
@@ -2346,74 +2442,18 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
             <a href="https://github.com/settings/tokens/new?scopes=repo,workflow" target="_blank" style="color:#C8A84B">Create one here</a>
             with <code style="font-size:10px;color:#C8A84B">repo</code> and <code style="font-size:10px;color:#C8A84B">workflow</code> scopes.
           </p>
-          <div class="form-row">
-            <label>GitHub Token</label>
-            <input type="password" id="vid-gh-token" placeholder="ghp_..." oninput="localStorage.setItem('gh_pat',this.value)">
-          </div>
-          <div class="form-row">
-            <label>Branch</label>
-            <input type="text" id="vid-gh-branch" placeholder="main" oninput="localStorage.setItem('gh_branch',this.value)">
-          </div>
+          <div class="form-row"><label>GitHub Token</label><input type="password" id="vid-gh-token" placeholder="ghp_..." oninput="localStorage.setItem('gh_pat',this.value)"></div>
+          <div class="form-row"><label>Branch</label><input type="text" id="vid-gh-branch" placeholder="main" oninput="localStorage.setItem('gh_branch',this.value)"></div>
         </div>
       </details>
     </div>
 
-    <!-- RIGHT: Preview + Output -->
+    <!-- RIGHT: Preview -->
     <div class="vid-preview-panel">
-
-      <!-- Scene Previews -->
       <div style="background:var(--card-bg);border:1px solid var(--input-border);border-radius:16px;padding:20px">
-        <p style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--brand-gray);margin-bottom:14px">Video Preview</p>
-        <div class="vid-scenes-preview">
-
-          <!-- Scene 1 -->
-          <div class="vid-scene-card">
-            <div class="vid-scene-label">Scene 1 · 0–8s <span>Hero</span></div>
-            <div class="vid-scene-preview has-photo" id="vid-prev-s1">
-              <img class="scene-photo" id="vid-prev-photo1" src="" alt="" style="display:none">
-              <div class="vid-scene-content">
-                <div class="vid-scene-badge">Gateway Real Estate Advisors</div>
-                <div class="vid-scene-addr" id="vid-prev-addr">3100 Nebraska Street</div>
-                <div class="vid-scene-price" id="vid-prev-price">$229,500</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Scene 2 -->
-          <div class="vid-scene-card">
-            <div class="vid-scene-label">Scene 2 · 8–16s <span>Features</span></div>
-            <div class="vid-scene-preview" id="vid-prev-s2" style="flex-direction:column;align-items:flex-start;padding:14px;gap:5px">
-              <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#C8A84B;margin-bottom:4px">Key Features</div>
-              <div class="vid-feature-tag" id="vid-prev-f1">Fully Renovated</div>
-              <div class="vid-feature-tag" id="vid-prev-f2">Fully Furnished</div>
-              <div class="vid-feature-tag" id="vid-prev-f3">Proven Airbnb Income</div>
-              <div class="vid-feature-tag" id="vid-prev-f4">Turnkey Investment</div>
-            </div>
-          </div>
-
-          <!-- Scene 3 -->
-          <div class="vid-scene-card">
-            <div class="vid-scene-label">Scene 3 · 16–23s <span>Stats</span></div>
-            <div class="vid-scene-preview" id="vid-prev-s3" style="gap:12px">
-              <div class="vid-stat"><div class="vid-stat-val" id="vid-prev-stat1">3</div><div class="vid-stat-lbl" id="vid-prev-lbl1">Bedrooms</div></div>
-              <div class="vid-stat"><div class="vid-stat-val" id="vid-prev-stat2">1.5</div><div class="vid-stat-lbl" id="vid-prev-lbl2">Bathrooms</div></div>
-              <div class="vid-stat"><div class="vid-stat-val" id="vid-prev-stat3">$4K</div><div class="vid-stat-lbl" id="vid-prev-lbl3">Airbnb / Mo</div></div>
-            </div>
-          </div>
-
-          <!-- Scene 4 -->
-          <div class="vid-scene-card">
-            <div class="vid-scene-label">Scene 4 · 23–30s <span>CTA</span></div>
-            <div class="vid-scene-preview has-photo" id="vid-prev-s4">
-              <img class="scene-photo" id="vid-prev-photo2" src="" alt="" style="display:none">
-              <div class="vid-scene-content">
-                <div style="font-size:13px;font-family:'EB Garamond',serif;font-weight:600;color:#fff">Schedule a Tour Today</div>
-                <div class="vid-scene-price" id="vid-prev-agents" style="margin-top:4px">Daniel Stillson &amp; Steph Dattolico</div>
-                <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;margin-top:4px">Opening Doors to Your Future</div>
-              </div>
-            </div>
-          </div>
-
+        <p style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--brand-gray);margin-bottom:14px">Scene Preview</p>
+        <div class="vid-scenes-preview" id="vid-scenes-preview">
+          <!-- populated by vidRenderScenePreview() -->
         </div>
       </div>
 
@@ -2421,9 +2461,10 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
       <div class="vid-output-card" id="vid-output-section" style="display:none">
         <div id="vid-output-inner"></div>
       </div>
-
     </div>
   </div>
+</div>
+
 </div>
 
 <!-- ========== STATUS BAR ========== -->
