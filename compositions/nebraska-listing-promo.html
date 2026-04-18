@@ -400,7 +400,7 @@
       .to(photo1, { opacity: 1, duration: 1.8, ease: 'power2.out' }, 0)
       .to(s1.querySelector('.badge'), { opacity: 1, duration: 0.8, ease: 'power2.out' }, 0.9)
       .to(s1.querySelector('.address'), { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }, 1.5)
-      .to(s1.querySelector('.price'), { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, 2.3)
+      .to(s1.querySelector('.price'), { opacity: 1, y: 0, duration: 0.9, ease: 'back.out(1.7)' }, 2.3)
 
     // ── Transition 1→2: cross-fade at t=8 ───────────────────────────────
     tl
