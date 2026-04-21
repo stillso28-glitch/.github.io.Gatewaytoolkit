@@ -525,6 +525,20 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   .btn-generate { background: var(--brand-blue); color: var(--brand-navy); border: none; padding: 14px 32px; font-size: 15px; font-weight: 700; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 24px auto 0; transition: all 0.2s; font-family: 'Montserrat', sans-serif; letter-spacing: 0.5px; }
   .btn-generate:hover { background: #b8cdd8; transform: translateY(-1px); }
   .btn-generate:active { transform: translateY(0); }
+
+  /* ── Template Picker (OM Builder) ── */
+  .tpl-pick-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tpl-pick-card { border: 2px solid var(--brand-border); border-radius: 10px; padding: 14px 18px; cursor: pointer; background: var(--brand-dark); transition: all 0.2s; min-width: 160px; text-align: center; position: relative; }
+  .tpl-pick-card:hover:not(.tpl-disabled) { border-color: var(--brand-blue); }
+  .tpl-pick-card.tpl-active { border-color: var(--brand-gold,#C8A84B); background: rgba(200,168,75,0.08); }
+  .tpl-pick-card.tpl-disabled { opacity: 0.45; cursor: not-allowed; }
+  .tpl-pick-thumb { width: 100%; height: 72px; border-radius: 5px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .tpl-pick-thumb.tpl-t1 { background: linear-gradient(135deg, #1E2F39 60%, #A2B6C0 100%); }
+  .tpl-pick-thumb.tpl-t2 { background: linear-gradient(135deg, #2B3A42 50%, #E8E0D0 100%); }
+  .tpl-pick-thumb.tpl-t3 { background: #222; }
+  .tpl-pick-name { font-size: 13px; font-weight: 700; color: var(--brand-blue); letter-spacing: 0.3px; }
+  .tpl-pick-sub { font-size: 11px; color: var(--brand-gray); margin-top: 3px; }
+  .tpl-pick-badge { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 700; background: var(--brand-gold,#C8A84B); color: #1a1a1a; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
   
   .btn-fetch { background: var(--brand-blue); color: var(--brand-navy); border: none; padding: 10px 20px; font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: all 0.2s; }
   .btn-fetch:hover { background: #b8cdd8; }
@@ -1508,6 +1522,26 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
 </div>
 
 <div class="container">
+  <!-- Template Picker -->
+  <div class="tpl-pick-row" id="tpl-pick-row">
+    <div class="tpl-pick-card tpl-active" id="tpl-card-1" onclick="selectOMTemplate(1)">
+      <div class="tpl-pick-thumb tpl-t1">📊</div>
+      <div class="tpl-pick-name">Original</div>
+      <div class="tpl-pick-sub">PPTX · Gateway Blue</div>
+    </div>
+    <div class="tpl-pick-card" id="tpl-card-2" onclick="selectOMTemplate(2)">
+      <div class="tpl-pick-badge">NEW</div>
+      <div class="tpl-pick-thumb tpl-t2">✦</div>
+      <div class="tpl-pick-name">Gateway Signature</div>
+      <div class="tpl-pick-sub">PDF · Oakridge Luxury</div>
+    </div>
+    <div class="tpl-pick-card tpl-disabled" id="tpl-card-3">
+      <div class="tpl-pick-thumb tpl-t3">🔜</div>
+      <div class="tpl-pick-name">Coming Soon</div>
+      <div class="tpl-pick-sub">Modern Minimal</div>
+    </div>
+  </div>
+
   <div class="info-bar">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#A2B6C0" stroke-width="1.5"/><path d="M8 5v3M8 10h.01" stroke="#A2B6C0" stroke-width="1.5" stroke-linecap="round"/></svg>
     <span style="font-size:13px;color:var(--brand-gray)">Fill in the fields below and click <strong style="color:var(--brand-blue)">Generate OM</strong> to download a branded PPTX presentation.</span>
@@ -1723,9 +1757,9 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
     <div id="pastOmList"></div>
   </div>
 
-  <button class="btn-generate" onclick="generateOM()">
+  <button class="btn-generate" id="btn-export-om" onclick="exportOM()">
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v10M6 9l4 4 4-4M4 15h12" stroke="#1E2F39" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Generate OM (PPTX)
+    <span id="btn-export-label">Export OM</span>
   </button>
   
   <div class="brand-footer">
@@ -5567,6 +5601,80 @@ function showStatus(msg) {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(function(){ el.style.display='none'; }, 3500);
+}
+
+// ==== TEMPLATE PICKER ====
+function selectOMTemplate(n) {
+  localStorage.setItem('gateway_om_template_selection', n);
+  for (var i = 1; i <= 2; i++) {
+    var card = document.getElementById('tpl-card-' + i);
+    if (card) card.classList.toggle('tpl-active', i === n);
+  }
+  var lbl = document.getElementById('btn-export-label');
+  if (lbl) lbl.textContent = n === 2 ? 'Export OM (PDF)' : 'Export OM (PPTX)';
+}
+
+(function initTemplatePicker() {
+  var saved = parseInt(localStorage.getItem('gateway_om_template_selection') || '1', 10);
+  if (saved === 2) setTimeout(function() { selectOMTemplate(2); }, 0);
+})();
+
+function exportOM() {
+  var tpl = parseInt(localStorage.getItem('gateway_om_template_selection') || '1', 10);
+  if (tpl === 2) generateGatewaySignature();
+  else generateOM();
+}
+
+// ==== GATEWAY SIGNATURE TEMPLATE ====
+function generateGatewaySignature() {
+  var v=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  var n=function(id){var el=document.getElementById(id);return el?(+el.value||0):0;};
+  var fmt=function(num){return'$'+(num||0).toLocaleString();};
+  var fmtK=function(num){if(Math.abs(num||0)>=1000000)return'$'+((num||0)/1000000).toFixed(2)+'M';if(Math.abs(num||0)>=1000)return'$'+Math.round((num||0)/1000)+'K';return'$'+(num||0).toLocaleString();};
+  var propName1=v('propName1')||'Property Name',propName2=v('propName2')||'',address=v('address')||'';
+  var askingPrice=n('askingPrice'),totalUnits=n('totalUnits'),capRate=v('capRate')||'';
+  var pricePerUnit=n('pricePerUnit'),noi=n('noi'),grm=v('grm')||'';
+  var execDesc=v('execDesc')||'',callout=v('callout')||'';
+  var hl1=v('hl1'),hl2=v('hl2'),hl3=v('hl3'),hl4=v('hl4');
+  var propDesc=v('propDesc')||'',occupancy=v('occupancy')||'',yearBuilt=v('yearBuilt')||'';
+  var lotSize=v('lotSize')||'',parking=v('parking')||'',propType=v('propType')||'';
+  var buildings=v('buildings')||'',features=v('features')||'';
+  var curIncome=n('curIncome'),pfIncome=n('pfIncome');
+  var mktCity=v('mktCity')||'',mktDesc=v('mktDesc')||'',population=v('population')||'';
+  var medIncome=v('medianIncome')||'',unemployment=v('unemployment')||'',avgRent=v('avgRent')||'';
+  var gwData={};try{gwData=JSON.parse(localStorage.getItem('gateway_about_company')||'{}');}catch(e){}
+  var agentProfiles=[];Object.keys(localStorage).forEach(function(k){if(k.startsWith('gateway_agent_profile_')&&agentProfiles.length<4){try{agentProfiles.push(JSON.parse(localStorage.getItem(k)));}catch(e){}}});
+  var ph=photos||[],coverPhoto=ph[0]||'',galleryPhotos=[ph[1],ph[2],ph[3],ph[4],ph[5]].filter(Boolean);
+  var unitMixRows='',totalUnitsCalc=0,totalRentCalc=0;
+  (unitData||[]).forEach(function(u){if(!u.type&&!u.units)return;var mo=(u.units||0)*(u.rent||0);totalUnitsCalc+=(u.units||0);totalRentCalc+=mo;unitMixRows+='<tr><td>'+(u.type||'')+'</td><td>'+(u.units||0)+'</td><td>'+(u.sqft||0)+' sf</td><td>'+fmt(u.rent)+'</td><td class="num">'+fmt(mo)+'</td></tr>';});
+  var annualRent=totalRentCalc*12,curExpRows='',curExpTotal=0;
+  (curExpenses||[]).forEach(function(e){if(!e.name)return;curExpTotal+=(e.amount||0);curExpRows+='<tr><td>'+e.name+'</td><td class="num">'+fmt(e.amount)+'</td><td class="num">'+fmt(e.amount)+'</td></tr>';});
+  var curOtherRows='';(curOtherIncome||[]).forEach(function(o){if(!o.name)return;curOtherRows+='<tr><td>'+o.name+'</td><td class="num">'+fmt(o.amount)+'</td><td class="num">'+fmt(o.pfAmount||o.amount)+'</td></tr>';});
+  var hlHTML=[hl1,hl2,hl3,hl4].filter(Boolean).map(function(h){return'<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;"><span style="color:#C8A84B;font-size:14px;flex-shrink:0;margin-top:2px;">&#10022;</span><p style="font-size:12px;line-height:1.75;color:#2C2C2C;margin:0;">'+h+'</p></div>';}).join('');
+  var photoGallery=galleryPhotos.length?'<div style="display:grid;grid-template-columns:repeat('+Math.min(galleryPhotos.length,3)+',1fr);gap:8px;">'+galleryPhotos.map(function(p){return'<img src="'+p+'" style="width:100%;height:178px;object-fit:cover;border-radius:4px;">';}).join('')+'</div>':'<p style="color:#A09A8E;font-style:italic;margin-top:40px;">No photos uploaded.</p>';
+  var agentCardsHTML=agentProfiles.length?agentProfiles.map(function(a){return'<div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:28px;">'+(a.headshot?'<img src="'+a.headshot+'" style="width:90px;height:118px;object-fit:cover;border-radius:4px;flex-shrink:0;">':'<div style="width:90px;height:118px;background:#3A4D56;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px;">&#128100;</div>')+'<div style="flex:1;"><div style="font-family:\'Playfair Display\',serif;font-size:18px;color:#2B3A42;margin-bottom:2px;">'+(a.name||'')+'</div><div style="font-size:10px;color:#6B6458;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">'+(a.title||'')+'</div>'+(a.bio?'<p style="font-size:11.5px;color:#2C2C2C;line-height:1.7;margin-bottom:8px;">'+a.bio+'</p>':'')+'<div style="display:flex;gap:20px;flex-wrap:wrap;font-size:10.5px;color:#6B6458;">'+(a.phone?'<span>&#128222; '+a.phone+'</span>':'')+(a.email?'<span>&#9993; '+a.email+'</span>':'')+(a.license?'<span>DRE '+a.license+'</span>':'')+'</div></div></div>';}).join(''):'<p style="color:#A09A8E;font-style:italic;">No agent profiles saved.</p>';
+  var svcTags=[gwData.svc1,gwData.svc2,gwData.svc3,gwData.svc4,gwData.svc5].filter(Boolean).map(function(s){return'<span style="font-size:11px;background:rgba(43,58,66,0.08);border:1px solid #C4BFB5;border-radius:4px;padding:4px 10px;color:#2B3A42;">'+s+'</span>';}).join('');
+  var now=new Date(),prepared=now.toLocaleDateString('en-US',{month:'long',year:'numeric'}),yr=now.getFullYear();
+  function pill(l,v2){return'<div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:10px 14px;margin-bottom:9px;"><div style="font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:#A09A8E;margin-bottom:3px;">'+l+'</div><div style="font-size:19px;font-weight:700;font-family:\'Playfair Display\',serif;color:#E8E0D0;">'+v2+'</div></div>';}
+  function stat(l,v2){return v2?'<div style="margin-bottom:14px;"><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#A09A8E;margin-bottom:3px;">'+l+'</div><div style="font-size:15px;font-weight:600;color:#E8E0D0;">'+v2+'</div></div>':'';}
+  function LP(title,extras,pgLabel,pgNum){return'<div style="width:38%;height:100%;background:#2B3A42;padding:44px 34px;display:flex;flex-direction:column;color:#E8E0D0;position:relative;flex-shrink:0;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;margin-bottom:28px;">GATEWAY<br>REAL ESTATE ADVISORS</div><div style="font-family:\'Playfair Display\',serif;font-size:26px;color:#E8E0D0;line-height:1.2;margin-bottom:0;">'+title+'</div><div style="height:1px;background:rgba(196,191,181,0.25);margin:16px 0 20px;"></div>'+(extras||'')+'<div style="position:absolute;bottom:22px;left:34px;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;">'+pgLabel+'</div><div style="position:absolute;bottom:22px;right:34px;font-size:9px;color:#6B6458;">'+pgNum+'</div></div>';}
+  var css='*{box-sizing:border-box;margin:0;padding:0;}@page{size:11in 8.5in landscape;margin:0;}body{font-family:Inter,sans-serif;background:#E8E0D0;color:#2C2C2C;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.page{width:11in;height:8.5in;display:flex;overflow:hidden;page-break-after:always;}.page:last-child{page-break-after:avoid;}.no-print{position:fixed;top:0;left:0;right:0;background:#2B3A42;color:#E8E0D0;padding:9px 24px;display:flex;align-items:center;gap:16px;z-index:9999;font-size:13px;font-family:Inter,sans-serif;}.no-print button{background:#C8A84B;color:#1a1a1a;border:none;padding:6px 18px;border-radius:4px;font-weight:700;cursor:pointer;font-size:12px;}@media print{.no-print{display:none!important;}}.rp{flex:1;height:100%;background:#E8E0D0;padding:44px 38px;display:flex;flex-direction:column;overflow:hidden;}.rule{height:1px;background:#C4BFB5;margin:12px 0;}.sec-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:6px;}.prop-tag{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:1.5px;background:rgba(200,168,75,0.18);color:#C8A84B;border:1px solid rgba(200,168,75,0.4);padding:3px 10px;border-radius:3px;margin-bottom:14px;}table{width:100%;border-collapse:collapse;font-size:11px;}th{font-size:9px;text-transform:uppercase;letter-spacing:1px;font-weight:700;padding:7px 10px;border-bottom:2px solid #C4BFB5;color:#6B6458;text-align:left;}td{padding:7px 10px;border-bottom:1px solid #C4BFB5;color:#2C2C2C;}tr:nth-child(even) td{background:rgba(196,191,181,0.22);}td.num{text-align:right;}.tr-total td{font-weight:700;border-top:2px solid #2B3A42;color:#2B3A42;background:rgba(43,58,66,0.06)!important;}.tr-head td{font-weight:700;font-size:10px;text-transform:uppercase;color:#2B3A42;background:rgba(43,58,66,0.06)!important;border-bottom:1px solid #C4BFB5;}';
+  var html='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>'+propName1+(propName2?' '+propName2:'')+' — Offering Memorandum</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body>'
+  +'<div class="no-print"><strong style="font-family:\'Playfair Display\',serif;font-size:14px;">Gateway Signature OM</strong> <span style="color:#A09A8E;">'+propName1+(propName2?' '+propName2:'')+(address?' · '+address:'')+'</span><button onclick="window.print()">&#128424; Print / Save as PDF</button><span style="color:#A09A8E;font-size:11px;">Chrome: File → Print → Save as PDF · Layout: Landscape</span></div>'
+  +'<div class="page" style="display:block;position:relative;"><div style="position:absolute;top:0;left:0;width:40%;height:100%;background:#2B3A42;z-index:2;display:flex;flex-direction:column;padding:50px 38px;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;margin-bottom:auto;">GATEWAY<br>REAL ESTATE ADVISORS</div><div>'+(propType?'<div class="prop-tag">'+propType+'</div>':'')+'<div style="font-family:\'Playfair Display\',serif;font-size:36px;font-weight:700;color:#E8E0D0;line-height:1.1;margin-bottom:6px;">'+propName1+'</div>'+(propName2?'<div style="font-family:\'Playfair Display\',serif;font-size:26px;font-weight:400;color:#A09A8E;margin-bottom:14px;">'+propName2+'</div>':'')+'<div style="height:1px;background:rgba(196,191,181,0.3);margin:14px 0;"></div><div style="font-size:12px;color:#A09A8E;line-height:1.6;margin-bottom:24px;">'+address+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px;">'+pill('Asking Price',fmtK(askingPrice))+pill('Cap Rate',(capRate||'—')+(capRate&&capRate.indexOf('%')===-1?'%':''))+pill('Total Units',totalUnits||'—')+pill('Price / Unit',fmtK(pricePerUnit))+'</div></div><div style="font-size:9px;color:#6B6458;text-transform:uppercase;letter-spacing:1.5px;">'+prepared+' · Confidential Offering</div></div>'+(coverPhoto?'<img src="'+coverPhoto+'" style="position:absolute;top:0;right:0;width:61%;height:100%;object-fit:cover;z-index:1;">':'<div style="position:absolute;top:0;right:0;width:61%;height:100%;background:linear-gradient(135deg,#3A4D56,#2B3A42);z-index:1;"></div>')+'<div style="position:absolute;top:0;right:0;width:61%;height:100%;background:linear-gradient(to right,#2B3A42 0%,transparent 20%);z-index:2;pointer-events:none;"></div></div>'
+  +'<div class="page">'+LP('Executive<br>Summary',(callout?'<div style="font-family:\'Playfair Display\',serif;font-size:14px;color:#C8A84B;line-height:1.6;font-style:italic;margin-bottom:16px;">"'+callout+'"</div>':'')+'<div style="margin-top:auto;">'+pill('NOI',fmtK(noi))+pill('GRM',grm||'—')+pill('Occupancy',occupancy||'—')+'</div>','Executive Summary','02')+'<div class="rp"><div class="sec-label">Investment Overview</div><div style="font-family:\'Playfair Display\',serif;font-size:20px;color:#2B3A42;margin-bottom:12px;">'+propName1+(propName2?' '+propName2:'')+'</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:10px;margin-bottom:20px;">'+(execDesc||'No executive description provided.')+'</p>'+(hlHTML?'<div class="sec-label" style="margin-bottom:10px;">Investment Highlights</div>'+hlHTML:'')+'</div></div>'
+  +'<div class="page">'+LP('Property<br>Overview',stat('Year Built',yearBuilt)+stat('Total Units',totalUnits||'')+stat('Property Type',propType)+stat('Buildings',buildings)+stat('Lot Size',lotSize)+stat('Parking',parking)+stat('Occupancy',occupancy),'Property Overview','03')+'<div class="rp"><div class="sec-label">Property Description</div><div style="font-family:\'Playfair Display\',serif;font-size:18px;color:#2B3A42;margin-bottom:12px;">'+address+'</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:10px;margin-bottom:18px;">'+(propDesc||'No property description provided.')+'</p>'+(features?'<div class="sec-label" style="margin-bottom:6px;">Features &amp; Amenities</div><p style="font-size:11.5px;line-height:1.8;color:#6B6458;">'+features+'</p>':'')+'</div></div>'
+  +'<div class="page">'+LP('Unit Mix &amp;<br>Rent Roll','<div style="margin-top:auto;">'+pill('Total Units',totalUnits||totalUnitsCalc||'—')+pill('Monthly Rent',fmtK(totalRentCalc))+pill('Annual Rent',fmtK(annualRent))+'</div>','Unit Mix','04')+'<div class="rp"><div class="sec-label">Unit Mix Summary</div><div class="rule"></div><table style="margin-top:8px;"><thead><tr><th>Unit Type</th><th>Units</th><th>Avg SF</th><th>Market Rent</th><th class="num">Monthly Total</th></tr></thead><tbody>'+(unitMixRows||'<tr><td colspan="5" style="color:#A09A8E;font-style:italic;">No unit data entered.</td></tr>')+'</tbody><tfoot><tr class="tr-total"><td>Total</td><td>'+(totalUnits||totalUnitsCalc)+'</td><td>—</td><td>—</td><td class="num">'+fmt(totalRentCalc)+'/mo</td></tr></tfoot></table></div></div>'
+  +'<div class="page">'+LP('Financial<br>Summary','<div style="margin-top:auto;">'+pill('Gross Income (Cur)',fmtK(curIncome))+pill('Gross Income (PF)',fmtK(pfIncome))+pill('NOI',fmtK(noi))+pill('Cap Rate',(capRate||'—')+(capRate&&capRate.indexOf('%')===-1?'%':''))+'</div>','Financial Summary','05')+'<div class="rp"><div class="sec-label">Income &amp; Expense Statement</div><div class="rule"></div><table style="margin-top:8px;"><thead><tr><th>Line Item</th><th class="num">Current</th><th class="num">Pro Forma</th></tr></thead><tbody><tr class="tr-head"><td colspan="3">Income</td></tr><tr><td>Gross Scheduled Rent</td><td class="num">'+fmt(curIncome)+'</td><td class="num">'+fmt(pfIncome)+'</td></tr>'+(curOtherRows||'')+'<tr class="tr-total"><td>Effective Gross Income</td><td class="num">'+fmt(curIncome)+'</td><td class="num">'+fmt(pfIncome)+'</td></tr><tr class="tr-head"><td colspan="3">Expenses</td></tr>'+(curExpRows||'<tr><td colspan="3" style="color:#A09A8E;font-style:italic;">No expense data.</td></tr>')+'<tr class="tr-total"><td>Total Expenses</td><td class="num">'+fmt(curExpTotal)+'</td><td class="num">'+fmt(curExpTotal)+'</td></tr><tr class="tr-total" style="background:rgba(43,58,66,0.1)!important;"><td>Net Operating Income</td><td class="num" style="color:#2B3A42;">'+fmt(noi)+'</td><td class="num" style="color:#2B3A42;">'+fmt(noi)+'</td></tr></tbody></table></div></div>'
+  +'<div class="page">'+LP('Market<br>Overview',(mktCity?'<div style="font-size:13px;color:#C8A84B;font-weight:600;margin-bottom:14px;">'+mktCity+'</div>':'')+stat('Population',population)+stat('Median HH Income',medIncome)+stat('Unemployment',unemployment)+stat('Avg Market Rent',avgRent),'Market Overview','06')+'<div class="rp"><div class="sec-label">Market Analysis</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:12px;">'+(mktDesc||'No market description provided.')+'</p></div></div>'
+  +'<div class="page"><div style="width:30%;height:100%;background:#2B3A42;padding:44px 34px;display:flex;flex-direction:column;flex-shrink:0;position:relative;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;margin-bottom:28px;">GATEWAY<br>REAL ESTATE ADVISORS</div><div style="font-family:\'Playfair Display\',serif;font-size:26px;color:#E8E0D0;line-height:1.2;">Property<br>Photos</div><div style="height:1px;background:rgba(196,191,181,0.25);margin:16px 0;"></div><div style="font-size:11px;color:#A09A8E;line-height:1.7;">'+address+'</div><div style="position:absolute;bottom:22px;right:34px;font-size:9px;color:#6B6458;">07</div></div><div class="rp" style="padding:24px 26px;">'+photoGallery+'</div></div>'
+  +'<div class="page">'+LP('About the<br>Agents','<div style="margin-top:auto;font-size:10.5px;color:#A09A8E;line-height:1.7;">Contact the listing agent(s) for information on this offering.</div>','Listing Agents','08')+'<div class="rp" style="overflow:auto;">'+agentCardsHTML+'</div></div>'
+  +'<div class="page">'+LP('About<br>Gateway','<div style="margin-top:auto;">'+(gwData.stat1val?pill(gwData.stat1lbl||'Transactions',gwData.stat1val):'')+(gwData.stat2val?pill(gwData.stat2lbl||'Volume',gwData.stat2val):'')+(gwData.stat3val?pill(gwData.stat3lbl||'Years',gwData.stat3val):'')+'</div>','About Gateway','09')+'<div class="rp"><div class="sec-label">Who We Are</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:12px;">'+(gwData.para1||'Gateway Real Estate Advisors is a premier commercial real estate brokerage specializing in multifamily investment properties.')+'</p>'+(gwData.para2?'<p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:14px;">'+gwData.para2+'</p>':'')+(svcTags?'<div class="sec-label" style="margin-top:20px;margin-bottom:10px;">Our Services</div><div style="display:flex;flex-wrap:wrap;gap:8px;">'+svcTags+'</div>':'')+'</div></div>'
+  +'<div class="page"><div style="width:38%;height:100%;background:#2B3A42;padding:44px 34px;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;position:relative;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;">GATEWAY<br>REAL ESTATE ADVISORS</div><div><div style="font-family:\'Playfair Display\',serif;font-size:30px;color:#E8E0D0;line-height:1.15;margin-bottom:20px;">Confidential<br>Offering</div><div style="height:1px;background:rgba(196,191,181,0.25);margin-bottom:16px;"></div><div style="font-size:11px;color:#A09A8E;line-height:1.7;">'+address+'</div></div><div style="font-size:9px;color:#6B6458;">'+prepared+'</div><div style="position:absolute;bottom:22px;right:34px;font-size:9px;color:#6B6458;">10</div></div><div class="rp" style="justify-content:center;"><div class="sec-label" style="margin-bottom:14px;">Confidentiality &amp; Disclaimer</div><div class="rule"></div><p style="font-size:10.5px;line-height:1.9;color:#6B6458;margin-top:14px;">This Offering Memorandum has been prepared by Gateway Real Estate Advisors for use by a limited number of qualified parties. The information contained herein has been obtained from sources believed reliable; however, Gateway Real Estate Advisors makes no representation, warranty, or guarantee as to the accuracy or completeness of any information contained herein.</p><p style="font-size:10.5px;line-height:1.9;color:#6B6458;margin-top:12px;">Prospective purchasers shall be responsible for their costs and expenses of investigating the subject property. This Offering Memorandum is subject to prior placement, errors, omissions, and withdrawal without notice.</p><p style="font-size:10.5px;line-height:1.9;color:#6B6458;margin-top:12px;">This is not an offer to sell securities. Pro forma projections are not guaranteed.</p><div style="margin-top:28px;padding-top:14px;border-top:1px solid #C4BFB5;font-size:10px;color:#A09A8E;">&copy; '+yr+' Gateway Real Estate Advisors &middot; All Rights Reserved</div></div></div>'
+  +'</body></html>';
+  var win=window.open('','_blank');
+  if(!win){alert('Please allow pop-ups to view the Offering Memorandum.');return;}
+  win.document.write(html);win.document.close();
 }
 
 // ==== GENERATE PPTX ====
