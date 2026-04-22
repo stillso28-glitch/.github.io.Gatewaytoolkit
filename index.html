@@ -4994,13 +4994,14 @@ function getBufferToken() {
 
 // Buffer's v1 API blocks direct browser requests (CORS). Try direct first,
 // then fall through multiple proxy services until one works.
+// Auth is via Authorization: Bearer header per the new api.buffer.com spec.
 async function bufferFetch(url, options) {
   var isPost = !!(options && options.method && options.method.toUpperCase() === 'POST');
 
   // 1. Direct request
   try { return await fetch(url, options); } catch(e) {}
 
-  // 2. allorigins.win — very reliable for GET, returns raw body
+  // 2. allorigins.win — reliable GET proxy, returns raw body
   if (!isPost) {
     try { return await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url)); } catch(e) {}
   }
@@ -5020,6 +5021,13 @@ async function bufferFetch(url, options) {
   throw new Error('Buffer API unreachable — all proxy routes failed');
 }
 
+// Build fetch options with Bearer auth header
+function bufferOpts(token, extra) {
+  var opts = Object.assign({headers: {}}, extra);
+  opts.headers = Object.assign({'Authorization': 'Bearer ' + token}, opts.headers);
+  return opts;
+}
+
 async function testBufferConnection() {
   var token = getBufferToken();
   if (!token) {
@@ -5034,10 +5042,9 @@ async function testBufferConnection() {
   statusText.textContent = 'Connecting...';
   statusText.style.color = '#C8A84B';
   try {
-    var resp = await bufferFetch('https://api.bufferapp.com/1/user.json?access_token=' + encodeURIComponent(token));
+    var resp = await bufferFetch('https://api.buffer.com/1/user.json', bufferOpts(token));
     var data;
     try { data = await resp.json(); } catch(je) { data = {}; }
-    // allorigins returns 200 even for Buffer errors — detect by checking for known error fields
     if ((!resp.ok) || data.code === 1010 || data.error) {
       handleBufferError({status: resp.status || data.code, message: data.error}, 'connection');
       return;
@@ -5052,7 +5059,6 @@ async function testBufferConnection() {
     if (refreshBtn) refreshBtn.style.display = 'inline-block';
     await loadBufferProfiles(token);
   } catch(e) {
-    // All proxy routes failed — show manual fallback
     if (dot) dot.className = 'buffer-dot off';
     statusText.textContent = '⚠️ Buffer API unreachable — use manual mode below';
     statusText.style.color = '#E74C3C';
@@ -5064,7 +5070,7 @@ async function loadBufferProfiles(token) {
   token = token || getBufferToken();
   if (!token) return;
   try {
-    var resp = await bufferFetch('https://api.bufferapp.com/1/profiles.json?access_token=' + encodeURIComponent(token));
+    var resp = await bufferFetch('https://api.buffer.com/1/profiles.json', bufferOpts(token));
     if (!resp.ok) { handleBufferError({status: resp.status}, 'profiles'); return; }
     var profiles = await resp.json();
     var wrap = document.getElementById('buffer-profiles-wrap');
@@ -5106,18 +5112,14 @@ async function schedulePostToBuffer(sendNow) {
     var results = [];
     for (var i = 0; i < profileIds.length; i++) {
       var body = new URLSearchParams();
-      body.append('access_token', token);
       body.append('profile_ids[]', profileIds[i]);
       body.append('text', caption);
       if (schedTime && !sendNow) {
         body.append('scheduled_at', new Date(schedTime).toISOString());
       }
       if (sendNow) body.append('now', 'true');
-      var resp = await bufferFetch('https://api.bufferapp.com/1/updates/create.json', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: body.toString()
-      });
+      var resp = await bufferFetch('https://api.buffer.com/1/updates/create.json',
+        bufferOpts(token, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: body.toString()}));
       if (!resp.ok) { handleBufferError({status: resp.status}, 'schedule'); continue; }
       var result = await resp.json();
       results.push(result);
