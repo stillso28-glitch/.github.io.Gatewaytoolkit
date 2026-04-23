@@ -239,7 +239,7 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   margin: 0 auto;
   padding: 24px;
   display: grid;
-  grid-template-columns: 460px 1fr;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   gap: 32px;
   min-height: calc(100vh - 60px);
 }
@@ -249,6 +249,7 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   padding: 20px 22px;
   border: 1px solid var(--input-border);
   overflow-y: auto;
+  overflow-x: hidden;
   max-height: calc(100vh - 80px);
   min-width: 0;
 }
@@ -373,9 +374,10 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: 10px;
-  padding: 14px;
+  padding: 12px;
   margin-bottom: 10px;
   position: relative;
+  overflow: hidden;
 }
 .agent-form-card .remove-agent {
   position: absolute;
@@ -390,16 +392,19 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
 .agent-form-card .agent-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 .agent-form-card .agent-fields input {
-  padding: 8px 10px;
+  padding: 7px 9px;
   font-size: 12px;
+  min-width: 0;
 }
 .agent-photo-upload {
-  width: 110px;
-  min-width: 110px;
-  height: 145px;
+  width: 90px;
+  min-width: 90px;
+  height: 120px;
   border-radius: 10px;
   background: var(--card-bg);
   border: 2px dashed #4a7a9a;
@@ -3246,7 +3251,7 @@ function renderSocialAgents() {
           ${a.photo ? '<img src="'+a.photo+'">' : '<div class="upload-hint"><span class="icon">👤</span><span class="label">Click to upload<br>agent photo</span></div>'}
           <input type="file" id="sm-agent-photo-${i}" accept="image/*,.heic,.HEIC" style="display:none" onchange="handleSocialAgentPhoto(${i}, this)">
         </div>
-        <div class="agent-fields" style="flex:1">
+        <div class="agent-fields" style="flex:1;min-width:0">
           <input type="text" placeholder="Name" value="${a.name}" oninput="smAgents[${i}].name=this.value; updateSocialPreview()">
           <input type="text" placeholder="Title" value="${a.title}" oninput="smAgents[${i}].title=this.value; updateSocialPreview()">
           <input type="text" placeholder="Phone" value="${a.phone}" oninput="smAgents[${i}].phone=this.value; updateSocialPreview()">
