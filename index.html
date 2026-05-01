@@ -1747,7 +1747,7 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
     <div class="sm-preview-wrap">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
         <div style="font-size:12px;color:var(--brand-gray);letter-spacing:1px;text-transform:uppercase" id="sm-preview-label">Live Preview (1080×1350)</div>
-        <select id="sm-format" onchange="onFormatChange()" style="font-size:12px;padding:4px 10px;background:rgba(162,182,192,0.1);border:1px solid rgba(162,182,192,0.2);border-radius:6px;color:var(--brand-cream);font-family:'Montserrat',sans-serif">
+        <select id="sm-format" onchange="onFormatChange()" style="font-size:12px;padding:4px 10px;background:#0D1B22;border:1px solid rgba(162,182,192,0.35);border-radius:6px;color:#E4E3D4;font-family:'Montserrat',sans-serif;cursor:pointer">
           <option value="portrait">Social Portrait 1080×1350</option>
           <option value="square">Social Square 1080×1080</option>
           <option value="mailer-6x4">Mailer 6×4 (Print)</option>
@@ -4926,158 +4926,159 @@ async function drawCommExclusive(canvas, ctx, heading) {
   var W = canvas.width, H = canvas.height;
   var f = smFields();
   var metrics = smGetMetrics(5);
-  var GOLD = '#C8A84B'; var BLUE = '#A2B6C0'; var CREAM = '#E4E3D4'; var DARK = '#0A1419';
+  var GOLD = '#C8A84B', BLUE = '#A2B6C0', CREAM = '#E4E3D4', LEFT = 56;
 
-  // Full-bleed photo or dark placeholder
+  // ── Full-bleed photo ──────────────────────────────────────────────────
   var photoSrc = smPhotos[0];
   if (photoSrc) {
     try {
       var img = await loadImageAsync(photoSrc);
-      ctx.save();
-      ctx.filter = smPhotoFilter();
+      ctx.save(); ctx.filter = smPhotoFilter();
       var sc = Math.max(W / img.width, H / img.height);
-      var dw = img.width * sc, dh = img.height * sc;
-      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      ctx.drawImage(img, (W - img.width*sc)/2, (H - img.height*sc)/2, img.width*sc, img.height*sc);
       ctx.restore();
     } catch(e) {}
   } else {
     ctx.fillStyle = '#0E1C24'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#1a2d38'; ctx.fillRect(0, 0, W, H * 0.6);
   }
 
-  // Dark gradient overlay — transparent at top, very dark at bottom
+  // ── Dark gradient overlay ─────────────────────────────────────────────
   var grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0,    'rgba(8,16,22,0.18)');
-  grad.addColorStop(0.45, 'rgba(8,16,22,0.35)');
-  grad.addColorStop(0.72, 'rgba(8,16,22,0.82)');
-  grad.addColorStop(1,    'rgba(8,16,22,0.97)');
+  grad.addColorStop(0,    'rgba(8,16,22,0.12)');
+  grad.addColorStop(0.40, 'rgba(8,16,22,0.25)');
+  grad.addColorStop(0.68, 'rgba(8,16,22,0.88)');
+  grad.addColorStop(1,    'rgba(8,16,22,0.98)');
   ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
 
-  // ── TOP BAR ───────────────────────────────────────────────────────────
-  // Thin gold top edge
-  ctx.fillStyle = GOLD; ctx.fillRect(0, 0, W, 5);
+  // ── TOP: gold edge + badge + logo ─────────────────────────────────────
+  ctx.fillStyle = GOLD; ctx.fillRect(0, 0, W, 6);
 
-  // Heading badge (top-left)
-  var badgeText = heading === 'comm-exclusive' ? 'EXCLUSIVELY OFFERED' :
-                  heading === 'comm-just-sold-premium' ? 'JUST SOLD' : heading.replace('comm-','').replace(/-/g,' ').toUpperCase();
+  var badgeText = heading === 'comm-exclusive'        ? 'EXCLUSIVELY OFFERED' :
+                  heading === 'comm-just-sold-premium' ? 'JUST SOLD' :
+                  heading.replace('comm-','').replace(/-/g,' ').toUpperCase();
   ctx.textAlign = 'left';
-  ctx.font = '600 18px "Montserrat", sans-serif';
-  ctx.fillStyle = GOLD;
-  ctx.fillText(badgeText, 56, 58);
-  // Underline
-  ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(56, 65); ctx.lineTo(56 + ctx.measureText(badgeText).width, 65); ctx.stroke();
+  ctx.font = '700 22px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
+  ctx.fillText(badgeText, LEFT, 64);
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(LEFT, 72); ctx.lineTo(LEFT + ctx.measureText(badgeText).width, 72); ctx.stroke();
 
-  // Gateway logo top right
   try {
     var lSrc = LOGO_WORDMARK_LIGHT || LOGO_CIRCLE_LIGHT;
     var lImg = await loadImageAsync(lSrc);
-    var lH = 38, lW = lH * (lImg.width / lImg.height);
-    ctx.drawImage(lImg, W - 56 - lW, 32, lW, lH);
+    var lH = 42, lW = lH * (lImg.width / lImg.height);
+    ctx.drawImage(lImg, W - LEFT - lW, 30, lW, lH);
   } catch(e) {}
 
-  // ── BOTTOM CONTENT ────────────────────────────────────────────────────
-  var baseY = H - 60;
+  // ── BOTTOM CONTENT — drawn bottom → top with explicit textAlign ───────
+  var y = H - 52;
 
-  // Contact line
+  // Contact / website line (centered)
   ctx.textAlign = 'center';
-  ctx.font = '400 19px "Montserrat", sans-serif';
-  ctx.fillStyle = 'rgba(162,182,192,0.7)';
-  ctx.fillText('gatewayreadvisors.com  ·  712-226-8000', W / 2, baseY);
+  ctx.font = '400 18px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(162,182,192,0.6)';
+  ctx.fillText('gatewayreadvisors.com  ·  712-226-8000', W / 2, y);
+  y -= 46;
 
-  // Agent strip
-  var agentY = baseY - 30;
-  if (smAgents.length > 0 && smAgents[0].name) {
-    var totalAgents = Math.min(smAgents.length, 2);
-    var agSlotW = 420;
-    var agStartX = W / 2 - (totalAgents === 2 ? agSlotW : agSlotW / 2);
-    for (var ai = 0; ai < totalAgents; ai++) {
-      var ag = smAgents[ai]; if (!ag.name) continue;
-      var ax = agStartX + ai * agSlotW;
-      var photoSz = 62;
+  // ── Agents (left-aligned, deduplicated) ──────────────────────────────
+  var validAgents = smAgents.filter(function(a, idx) {
+    if (!a || !a.name || !a.name.trim()) return false;
+    // Deduplicate by name
+    return smAgents.findIndex(function(b) { return b && b.name === a.name; }) === idx;
+  }).slice(0, 2);
+
+  if (validAgents.length > 0) {
+    var agSlotW = validAgents.length === 2 ? Math.floor((W - 112 - 24) / 2) : W - 112;
+    var photoSz = 80;
+
+    for (var ai = 0; ai < validAgents.length; ai++) {
+      var ag = validAgents[ai];
+      var axBase = LEFT + ai * (agSlotW + 24);
+      var textX = axBase;
+
       if (ag.photo) {
         try {
-          var ap = await loadImageAsync(ag.photo);
-          ctx.save(); ctx.beginPath();
-          ctx.arc(ax + photoSz / 2, agentY - photoSz - 4, photoSz / 2, 0, Math.PI * 2);
-          ctx.clip();
-          var asc = Math.max(photoSz / ap.width, photoSz / ap.height);
-          ctx.drawImage(ap, ax, agentY - photoSz - 4 - photoSz / 2, ap.width * asc, ap.height * asc);
+          var apImg = await loadImageAsync(ag.photo);
+          var cxC = axBase + photoSz / 2, cyC = y - photoSz / 2 - 4;
+          ctx.save(); ctx.beginPath(); ctx.arc(cxC, cyC, photoSz/2, 0, Math.PI*2); ctx.clip();
+          var apSc = Math.max(photoSz/apImg.width, photoSz/apImg.height);
+          ctx.drawImage(apImg, cxC - apImg.width*apSc/2, cyC - apImg.height*apSc/2, apImg.width*apSc, apImg.height*apSc);
           ctx.restore();
-          ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(ax + photoSz / 2, agentY - photoSz - 4, photoSz / 2, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = GOLD; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(cxC, cyC, photoSz/2, 0, Math.PI*2); ctx.stroke();
+          textX = axBase + photoSz + 18;
         } catch(e) {}
       }
-      var tAx = ag.photo ? ax + photoSz + 12 : ax;
+
+      // Larger agent text — always textAlign = 'left'
       ctx.textAlign = 'left';
-      ctx.font = '600 22px "Montserrat", sans-serif'; ctx.fillStyle = CREAM;
-      ctx.fillText(ag.name, tAx, agentY - (ag.photo ? photoSz + 8 : 0) - 28);
-      ctx.font = '400 17px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
-      if (ag.title) ctx.fillText(ag.title, tAx, agentY - (ag.photo ? photoSz + 8 : 0) - 6);
-      if (ag.phone) { ctx.fillStyle = GOLD; ctx.fillText(ag.phone, tAx, agentY - (ag.photo ? photoSz + 8 : 0) + 16); }
+      var lineBase = y - 8;
+      ctx.font = '700 28px "Montserrat", sans-serif'; ctx.fillStyle = CREAM;
+      ctx.fillText(ag.name, textX, lineBase - 48);
+      ctx.font = '400 20px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
+      if (ag.title) { ctx.fillText(ag.title, textX, lineBase - 22); }
+      if (ag.phone) { ctx.font = '600 20px "Montserrat", sans-serif'; ctx.fillStyle = GOLD; ctx.fillText(ag.phone, textX, lineBase + 4); }
     }
-    agentY -= 110;
-  } else {
-    agentY -= 20;
+    y -= (ag.photo ? photoSz + 24 : 80);
   }
 
   // Separator
   ctx.strokeStyle = 'rgba(162,182,192,0.3)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(56, agentY); ctx.lineTo(W - 56, agentY); ctx.stroke();
-  agentY -= 22;
+  ctx.beginPath(); ctx.moveTo(LEFT, y); ctx.lineTo(W - LEFT, y); ctx.stroke();
+  y -= 24;
 
-  // Metrics row (up to 5)
+  // ── Metrics chips — centered row, bigger & bolder ─────────────────────
   if (metrics.length > 0) {
-    var mW = Math.min(200, (W - 112) / metrics.length - 8);
-    var mH = 68; var mGap = 8;
-    var totalMW = metrics.length * mW + (metrics.length - 1) * mGap;
-    var mX = (W - totalMW) / 2;
-    metrics.forEach(function(m) {
-      // Glass card
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      roundRect(ctx, mX, agentY - mH, mW, mH, 8); ctx.fill();
-      ctx.strokeStyle = 'rgba(162,182,192,0.2)'; ctx.lineWidth = 1;
-      roundRect(ctx, mX, agentY - mH, mW, mH, 8); ctx.stroke();
-      // Value
+    var mCount  = Math.min(metrics.length, 5);
+    var mGap    = 10;
+    var mH      = 92;
+    var mW      = Math.floor((W - LEFT * 2 - mGap * (mCount - 1)) / mCount);
+    var mStartX = LEFT;
+    metrics.slice(0, mCount).forEach(function(m) {
+      // Card fill + gold border
+      ctx.fillStyle = 'rgba(255,255,255,0.09)';
+      ctx.beginPath(); roundRect(ctx, mStartX, y - mH, mW, mH, 10); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,168,75,0.35)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); roundRect(ctx, mStartX, y - mH, mW, mH, 10); ctx.stroke();
+      // Value — big + gold
       ctx.textAlign = 'center';
-      ctx.font = '700 22px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
-      ctx.fillText(m.value, mX + mW / 2, agentY - mH + 32);
-      // Label
-      ctx.font = '500 11px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
-      ctx.fillText(m.label.toUpperCase(), mX + mW / 2, agentY - mH + 52);
-      mX += mW + mGap;
+      ctx.font = '700 30px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
+      ctx.fillText(m.value.length > 10 ? m.value.slice(0,10) : m.value, mStartX + mW/2, y - mH + 42);
+      // Label — readable
+      ctx.font = '600 13px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
+      ctx.fillText(m.label.toUpperCase(), mStartX + mW/2, y - mH + 68);
+      mStartX += mW + mGap;
     });
-    agentY -= mH + 18;
+    y -= mH + 22;
   }
 
-  // Price
+  // Price — always reset textAlign to left before drawing
+  ctx.textAlign = 'left';
   if (f.price) {
-    ctx.textAlign = 'left';
-    ctx.font = '300 42px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
-    ctx.fillText(f.price, 56, agentY); agentY -= 52;
+    ctx.font = '300 52px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
+    ctx.fillText(f.price, LEFT, y); y -= 64;
   }
 
-  // Address
-  if (f.address) {
-    ctx.font = '500 20px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
-    ctx.fillText(f.address.toUpperCase(), 56, agentY); agentY -= 36;
+  // Address — only show if different from property name
+  ctx.textAlign = 'left';
+  if (f.address && f.address !== f.propName) {
+    ctx.font = '500 22px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
+    ctx.fillText(f.address.toUpperCase(), LEFT, y); y -= 44;
   }
 
-  // Property name
+  // Property name — serif italic, always textAlign = left
   var nameText = f.propName || f.address || 'Property Name';
-  ctx.font = 'italic 600 52px "EB Garamond", Georgia, serif'; ctx.fillStyle = CREAM;
-  // Wrap if long
-  if (ctx.measureText(nameText).width > W - 112) {
-    var words = nameText.split(' '), line = '', lineY = agentY;
+  ctx.textAlign = 'left';
+  ctx.font = 'italic 600 60px "EB Garamond", Georgia, serif'; ctx.fillStyle = CREAM;
+  var nmW = W - LEFT * 2;
+  if (ctx.measureText(nameText).width > nmW) {
+    var words = nameText.split(' '), line = '';
     words.forEach(function(w) {
       var test = line + (line ? ' ' : '') + w;
-      if (ctx.measureText(test).width > W - 112 && line) {
-        ctx.fillText(line, 56, lineY); line = w; lineY -= 62;
-      } else { line = test; }
+      if (ctx.measureText(test).width > nmW && line) { ctx.fillText(line, LEFT, y); line = w; y -= 70; }
+      else { line = test; }
     });
-    ctx.fillText(line, 56, lineY);
+    ctx.fillText(line, LEFT, y);
   } else {
-    ctx.fillText(nameText, 56, agentY);
+    ctx.fillText(nameText, LEFT, y);
   }
 }
 
@@ -5137,109 +5138,114 @@ async function drawCommInvestmentAlert(canvas, ctx) {
   ctx.fillStyle = photoGrad; ctx.fillRect(PANEL_W, H - 160, W - PANEL_W, 160);
 
   // ── LEFT PANEL CONTENT ────────────────────────────────────────────────
-  var px = 32; var py = 50;
+  var PAD = 32;
+  var py  = 48;
 
   // Logo
+  ctx.textAlign = 'left';
   try {
     var lSrc = LOGO_WORDMARK_LIGHT || LOGO_CIRCLE_LIGHT;
     var lImg = await loadImageAsync(lSrc);
-    var lH = 32; var lW = lH * (lImg.width / lImg.height);
-    ctx.drawImage(lImg, px, py, lW, lH);
-    py += lH + 36;
-  } catch(e) { py += 60; }
+    var lH = 34, lW = lH * (lImg.width / lImg.height);
+    ctx.drawImage(lImg, PAD, py, lW, lH);
+    py += lH + 32;
+  } catch(e) { py += 62; }
 
-  // "INVESTMENT ALERT" heading
+  // "INVESTMENT / ALERT" heading
   ctx.textAlign = 'left';
-  ctx.font = '800 54px "Montserrat", sans-serif'; ctx.fillStyle = CREAM;
-  ctx.fillText('INVESTMENT', px, py); py += 60;
-  ctx.font = '300 54px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
-  ctx.fillText('ALERT', px, py); py += 22;
+  ctx.font = '800 56px "Montserrat", sans-serif'; ctx.fillStyle = CREAM;
+  ctx.fillText('INVESTMENT', PAD, py); py += 62;
+  ctx.font = '300 56px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
+  ctx.fillText('ALERT', PAD, py); py += 26;
 
   // Gold separator
-  ctx.fillStyle = GOLD; ctx.fillRect(px, py, PANEL_W - px * 2, 3); py += 24;
+  ctx.fillStyle = GOLD; ctx.fillRect(PAD, py, PANEL_W - PAD * 2, 3); py += 28;
 
-  // Property name
-  if (f.propName) {
-    ctx.font = 'italic 500 24px "EB Garamond", Georgia, serif'; ctx.fillStyle = BLUE;
-    // Wrap text
-    var pnW = PANEL_W - px * 2;
-    var pnWords = f.propName.split(' '); var pnLine = ''; var pnY = py;
-    pnWords.forEach(function(w) {
+  // Property name (italic, larger)
+  var pnText = f.propName || f.address || '';
+  if (pnText) {
+    ctx.textAlign = 'left';
+    ctx.font = 'italic 600 26px "EB Garamond", Georgia, serif'; ctx.fillStyle = CREAM;
+    var pnW = PANEL_W - PAD * 2, pnLine = '';
+    pnText.split(' ').forEach(function(w) {
       var test = pnLine + (pnLine ? ' ' : '') + w;
-      if (ctx.measureText(test).width > pnW && pnLine) {
-        ctx.fillText(pnLine, px, pnY); pnLine = w; pnY += 30;
-      } else { pnLine = test; }
+      if (ctx.measureText(test).width > pnW && pnLine) { ctx.fillText(pnLine, PAD, py); pnLine = w; py += 32; }
+      else { pnLine = test; }
     });
-    ctx.fillText(pnLine, px, pnY); py = pnY + 36;
+    ctx.fillText(pnLine, PAD, py); py += 32;
   }
 
-  // Address (shorter)
-  if (f.address) {
+  // Address — only if different from property name
+  if (f.address && f.address !== f.propName) {
+    ctx.textAlign = 'left';
     ctx.font = '400 15px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(162,182,192,0.6)';
-    var addrShort = f.address.length > 32 ? f.address.slice(0, 32) + '…' : f.address;
-    ctx.fillText(addrShort, px, py); py += 30;
+    var addrS = f.address.length > 34 ? f.address.slice(0, 34) + '…' : f.address;
+    ctx.fillText(addrS, PAD, py); py += 26;
   }
 
-  // Price — featured
+  // Price
   if (f.price) {
-    ctx.font = '600 30px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
-    ctx.fillText(f.price, px, py); py += 44;
+    ctx.textAlign = 'left';
+    ctx.font = '600 32px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
+    ctx.fillText(f.price, PAD, py); py += 46;
   }
 
-  // Metrics — stacked
+  // ── Metrics — 2-col stacked, bigger values ────────────────────────────
   if (metrics.length > 0) {
-    ctx.strokeStyle = 'rgba(162,182,192,0.1)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(px, py - 8); ctx.lineTo(PANEL_W - px, py - 8); ctx.stroke();
-    py += 10;
+    ctx.strokeStyle = 'rgba(162,182,192,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, py - 6); ctx.lineTo(PANEL_W - PAD, py - 6); ctx.stroke();
+    py += 14;
 
-    // Pair metrics side by side if panel is wide enough
-    var mCols = 2, mColW = (PANEL_W - px * 2 - 10) / 2;
-    var mCol = 0, rowStartY = py;
+    var mCols = 2, mColW = Math.floor((PANEL_W - PAD * 2 - 12) / 2), mRowH = 88;
     metrics.slice(0, 6).forEach(function(m, mi) {
-      var mx = px + (mCol % mCols) * (mColW + 10);
-      var my = rowStartY + Math.floor(mCol / mCols) * 80;
-      // Value
-      ctx.font = '700 26px "Montserrat", sans-serif'; ctx.fillStyle = GOLD; ctx.textAlign = 'left';
-      ctx.fillText(m.value.length > 10 ? m.value.slice(0,10) : m.value, mx, my + 26);
+      var mx = PAD + (mi % mCols) * (mColW + 12);
+      var my = py + Math.floor(mi / mCols) * mRowH;
+      ctx.textAlign = 'left';
+      // Value — bigger, bolder
+      ctx.font = '700 28px "Montserrat", sans-serif'; ctx.fillStyle = GOLD;
+      ctx.fillText(m.value.length > 11 ? m.value.slice(0, 11) : m.value, mx, my + 30);
       // Label
-      ctx.font = '400 12px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(162,182,192,0.65)';
-      ctx.fillText(m.label.toUpperCase(), mx, my + 44);
-      // Divider
-      ctx.strokeStyle = 'rgba(162,182,192,0.07)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(mx, my + 56); ctx.lineTo(mx + mColW, my + 56); ctx.stroke();
-      mCol++;
+      ctx.font = '600 13px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(162,182,192,0.75)';
+      ctx.fillText(m.label.toUpperCase(), mx, my + 52);
+      // Thin divider under each cell
+      ctx.strokeStyle = 'rgba(162,182,192,0.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(mx, my + 64); ctx.lineTo(mx + mColW, my + 64); ctx.stroke();
     });
-    py = rowStartY + Math.ceil(Math.min(metrics.length, 6) / mCols) * 80 + 16;
+    py += Math.ceil(Math.min(metrics.length, 6) / mCols) * mRowH + 12;
   }
 
-  // Agent info at bottom of left panel
-  var agentPY = H - 100;
-  ctx.strokeStyle = 'rgba(162,182,192,0.12)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(px, agentPY - 16); ctx.lineTo(PANEL_W - px, agentPY - 16); ctx.stroke();
-  if (smAgents.length > 0 && smAgents[0].name) {
-    var ag = smAgents[0];
-    if (ag.photo) {
+  // ── Agent — bottom of left panel ─────────────────────────────────────
+  var agY = H - 96;
+  ctx.strokeStyle = 'rgba(162,182,192,0.14)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, agY - 14); ctx.lineTo(PANEL_W - PAD, agY - 14); ctx.stroke();
+
+  var firstAgent = smAgents.find(function(a) { return a && a.name && a.name.trim(); });
+  if (firstAgent) {
+    var agTX = PAD;
+    if (firstAgent.photo) {
       try {
-        var apImg = await loadImageAsync(ag.photo);
-        ctx.save(); ctx.beginPath(); ctx.arc(px + 26, agentPY + 10, 26, 0, Math.PI * 2); ctx.clip();
-        var apSc = Math.max(52 / apImg.width, 52 / apImg.height);
-        ctx.drawImage(apImg, px, agentPY - 16, apImg.width * apSc, apImg.height * apSc); ctx.restore();
+        var apImg = await loadImageAsync(firstAgent.photo);
+        var ciR = 28, ciX = PAD + ciR, ciY = agY + 8;
+        ctx.save(); ctx.beginPath(); ctx.arc(ciX, ciY, ciR, 0, Math.PI * 2); ctx.clip();
+        var apSc = Math.max(ciR*2/apImg.width, ciR*2/apImg.height);
+        ctx.drawImage(apImg, ciX - apImg.width*apSc/2, ciY - apImg.height*apSc/2, apImg.width*apSc, apImg.height*apSc);
+        ctx.restore();
         ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(px + 26, agentPY + 10, 26, 0, Math.PI * 2); ctx.stroke();
-        px += 62;
+        ctx.beginPath(); ctx.arc(ciX, ciY, ciR, 0, Math.PI * 2); ctx.stroke();
+        agTX = PAD + ciR * 2 + 14;
       } catch(e2) {}
     }
-    ctx.textAlign = 'left'; ctx.font = '600 19px "Montserrat", sans-serif'; ctx.fillStyle = CREAM;
-    ctx.fillText(ag.name, px, agentPY);
-    ctx.font = '400 14px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
-    if (ag.title) ctx.fillText(ag.title, px, agentPY + 20);
-    if (ag.phone) { ctx.fillStyle = GOLD; ctx.fillText(ag.phone, px, agentPY + 40); }
+    ctx.textAlign = 'left';
+    ctx.font = '600 20px "Montserrat", sans-serif'; ctx.fillStyle = CREAM;
+    ctx.fillText(firstAgent.name, agTX, agY);
+    ctx.font = '400 15px "Montserrat", sans-serif'; ctx.fillStyle = BLUE;
+    if (firstAgent.title) ctx.fillText(firstAgent.title, agTX, agY + 22);
+    if (firstAgent.phone) { ctx.fillStyle = GOLD; ctx.font = '600 15px "Montserrat", sans-serif'; ctx.fillText(firstAgent.phone, agTX, agY + 44); }
   }
-  px = 32;
 
-  // Gateway website on photo panel bottom
-  ctx.textAlign = 'center'; ctx.font = '400 17px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(228,227,212,0.55)';
-  ctx.fillText('gatewayreadvisors.com', PANEL_W + (W - PANEL_W) / 2, H - 28);
+  // Website on photo panel
+  ctx.textAlign = 'center'; ctx.font = '400 17px "Montserrat", sans-serif'; ctx.fillStyle = 'rgba(228,227,212,0.5)';
+  ctx.fillText('gatewayreadvisors.com  ·  712-226-8000', PANEL_W + (W - PANEL_W) / 2, H - 28);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
