@@ -1422,8 +1422,37 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
   <img class="nav-logo" src="assets/logo-nav.png" alt="Gateway">
   <span class="nav-title">Agent Toolkit</span>
   <span class="nav-breadcrumb" id="nav-breadcrumb"></span>
+  <button id="ai-status-badge" onclick="openAISetup()" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid;cursor:pointer;font-family:'Montserrat',sans-serif;font-weight:600;letter-spacing:0.5px;transition:all 0.2s;margin-right:4px">✦ AI</button>
   <button class="home-btn" id="home-btn" onclick="navigateTo('landing')" style="display:none">← Back to Home</button>
 </nav>
+
+<!-- ========== AI SETUP MODAL ========== -->
+<div id="ai-setup-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+  <div style="background:#1a2830;border:1px solid rgba(162,182,192,0.2);border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--brand-cream);font-family:'Montserrat',sans-serif">✦ AI Setup</div>
+        <div style="font-size:12px;color:var(--brand-gray);margin-top:4px">Powers Executive Summary, Highlights, Property Descriptions & T12 parsing</div>
+      </div>
+      <button onclick="closeAISetup()" style="background:none;border:none;color:var(--brand-gray);font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+    </div>
+    <div style="background:rgba(162,182,192,0.06);border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid rgba(162,182,192,0.1)">
+      <div style="font-size:12px;color:var(--brand-gray);margin-bottom:10px;line-height:1.6">
+        Get your free API key at <strong style="color:var(--brand-blue)">console.anthropic.com</strong> → API Keys → Create Key.<br>
+        The key stays on <em>this device only</em> — never uploaded anywhere.
+      </div>
+      <label style="font-size:11px;color:var(--brand-gray);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Claude API Key</label>
+      <input id="ai-key-input" type="password" placeholder="sk-ant-api03-..." style="width:100%;font-size:13px;font-family:monospace;letter-spacing:1px" onkeydown="if(event.key==='Enter')saveAIKey()">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveAIKey()" style="flex:1;padding:11px;background:linear-gradient(135deg,#1E2F39,#2a4a5a);border:1px solid var(--brand-blue);border-radius:8px;color:var(--brand-cream);font-family:'Montserrat',sans-serif;font-weight:600;font-size:13px;cursor:pointer">✓ Save & Activate</button>
+      <button onclick="clearAIKey()" style="padding:11px 16px;background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);border-radius:8px;color:#e74c3c;font-family:'Montserrat',sans-serif;font-size:12px;cursor:pointer">Remove Key</button>
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:var(--brand-gray);text-align:center">
+      Tip: Add <code style="background:rgba(162,182,192,0.1);padding:1px 5px;border-radius:3px;font-size:10px">claudeApiKey</code> to config.js to auto-load on every device
+    </div>
+  </div>
+</div>
 
 <!-- ========== LANDING PAGE ========== -->
 <div id="page-landing" class="page active">
@@ -1786,7 +1815,14 @@ h1, h2, h3, h4 { font-family: 'EB Garamond', Georgia, serif; }
     <div class="form-grid">
       <div class="form-group"><label>Asking Price ($)</label><input id="askingPrice" type="number" placeholder="844000" oninput="recalcMetrics()"></div>
       <div class="form-group"><label>Total Units</label><input id="totalUnits" type="number" placeholder="13" oninput="recalcMetrics()"></div>
-      <div class="form-group"><label>Down Payment ($)</label><input id="downPayment" type="number" placeholder="211000" oninput="recalcMetrics()"></div>
+      <div class="form-group">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          Down Payment ($)
+          <button type="button" onclick="autoCalcDownPayment()" style="font-size:10px;padding:2px 8px;background:rgba(162,182,192,0.15);border:1px solid rgba(162,182,192,0.3);border-radius:4px;color:var(--brand-blue);cursor:pointer;font-family:inherit">25% auto</button>
+        </label>
+        <input id="downPayment" type="number" placeholder="e.g. 211000" oninput="recalcMetrics()">
+        <div style="font-size:10px;color:var(--brand-gray);margin-top:3px">Buyer's equity at close — used for Cash-on-Cash return. Typically 20–30% of asking price.</div>
+      </div>
       <div class="form-group" style="position:relative"><label>Cap Rate (%) <span style="font-size:10px;color:var(--brand-blue)">auto</span></label><input id="capRate" type="number" step="0.01" placeholder="8.50" readonly style="background:rgba(162,182,192,0.1);color:var(--brand-blue)"></div>
       <div class="form-group" style="position:relative"><label>Price Per Unit ($) <span style="font-size:10px;color:var(--brand-blue)">auto</span></label><input id="pricePerUnit" type="number" placeholder="64923" readonly style="background:rgba(162,182,192,0.1);color:var(--brand-blue)"></div>
     </div>
@@ -3007,6 +3043,87 @@ var BRAND = {
   gray: '#969694',
   white: '#FFFFFF',
   black: '#282828'
+};
+
+// ==== CONFIG SYNC ====
+// Auto-wire API keys from config.js into localStorage on every page load.
+// Set claudeApiKey in config.js once — AI features work everywhere automatically.
+(function() {
+  var cfg = window.CONFIG || {};
+  if (cfg.claudeApiKey && cfg.claudeApiKey.trim()) {
+    localStorage.setItem('gw_claude_api_key', cfg.claudeApiKey.trim());
+  }
+  if (cfg.bufferAccessToken && cfg.bufferAccessToken.trim() && cfg.bufferAccessToken !== 'YOUR_BUFFER_ACCESS_TOKEN_HERE') {
+    localStorage.setItem('gw_buffer_token', cfg.bufferAccessToken.trim());
+  }
+  if (cfg.adminPassword && cfg.adminPassword.trim()) {
+    localStorage.setItem('gw_admin_pass', cfg.adminPassword.trim());
+  }
+})();
+
+// ==== AI STATUS INDICATOR ====
+// Shows a subtle badge in the nav when Claude is or isn't configured.
+function getClaudeKeyGlobal() {
+  return (localStorage.getItem('gw_claude_api_key') || '').trim();
+}
+
+function renderAIStatusBadge() {
+  var badge = document.getElementById('ai-status-badge');
+  if (!badge) return;
+  var key = getClaudeKeyGlobal();
+  if (key) {
+    badge.title = 'AI Connected — Claude API key is active';
+    badge.style.background = 'rgba(76,175,80,0.15)';
+    badge.style.color = '#4CAF50';
+    badge.style.borderColor = 'rgba(76,175,80,0.3)';
+    badge.textContent = '✦ AI On';
+  } else {
+    badge.title = 'AI Not Configured — click to set up Claude API key';
+    badge.style.background = 'rgba(255,193,7,0.12)';
+    badge.style.color = '#FFC107';
+    badge.style.borderColor = 'rgba(255,193,7,0.25)';
+    badge.textContent = '✦ AI Setup';
+  }
+}
+
+window.openAISetup = function() {
+  var existing = getClaudeKeyGlobal();
+  var modal = document.getElementById('ai-setup-modal');
+  if (!modal) return;
+  var inp = document.getElementById('ai-key-input');
+  if (inp) inp.value = existing ? '•'.repeat(20) + existing.slice(-6) : '';
+  modal.style.display = 'flex';
+  setTimeout(function() { if (inp) inp.focus(); }, 100);
+};
+
+window.closeAISetup = function() {
+  var modal = document.getElementById('ai-setup-modal');
+  if (modal) modal.style.display = 'none';
+};
+
+window.saveAIKey = function() {
+  var inp = document.getElementById('ai-key-input');
+  if (!inp) return;
+  var val = inp.value.trim();
+  if (!val || val.startsWith('•')) { closeAISetup(); return; }
+  if (!val.startsWith('sk-ant-')) {
+    showGlobalStatus('⚠️ That doesn\'t look like a valid Claude API key (should start with sk-ant-)');
+    return;
+  }
+  localStorage.setItem('gw_claude_api_key', val);
+  closeAISetup();
+  renderAIStatusBadge();
+  showGlobalStatus('✓ Claude API key saved — AI features are now active');
+};
+
+window.clearAIKey = function() {
+  if (!confirm('Remove the Claude API key? AI features will stop working.')) return;
+  localStorage.removeItem('gw_claude_api_key');
+  var inp = document.getElementById('ai-key-input');
+  if (inp) inp.value = '';
+  closeAISetup();
+  renderAIStatusBadge();
+  showGlobalStatus('Claude API key removed');
 };
 
 // ==== LOGIN GATE ====
@@ -6007,6 +6124,15 @@ function calcNOI(prefix) {
   recalcMetrics();
 }
 
+function autoCalcDownPayment() {
+  var price = +(document.getElementById('askingPrice').value) || 0;
+  if (!price) { showGlobalStatus('⚠️ Enter Asking Price first'); return; }
+  var dp = Math.round(price * 0.25);
+  document.getElementById('downPayment').value = dp;
+  recalcMetrics();
+  showGlobalStatus('Down payment set to 25% of asking price ($' + dp.toLocaleString() + ')');
+}
+
 function recalcMetrics() {
   var askingPrice = +(document.getElementById('askingPrice').value) || 0;
   var totalUnits = +(document.getElementById('totalUnits').value) || 0;
@@ -7356,22 +7482,59 @@ renderPastOMs();
     }
   }
 
-  // ---- INJECT OM UPLOAD/EDIT ----
+  // ---- INJECT OM SAVE / LOAD BAR ----
   function injectOMUpload() {
     var tab0 = document.querySelector('#tab0');
     if (!tab0) return;
-    var div = document.createElement('div');
-    div.style.cssText = 'margin:16px 0;padding:16px;background:rgba(162,182,192,0.08);border-radius:10px;border:1px dashed var(--brand-blue)';
-    div.innerHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">' +
-      '<span style="font-size:16px">\u{1F4C2}</span>' +
-      '<div><strong style="font-size:14px">Upload & Edit OM</strong>' +
-      '<p style="font-size:12px;color:var(--brand-gray);margin-top:2px">Upload a saved OM (.json) or existing PPTX to auto-populate fields</p></div></div>' +
+
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;padding:14px 16px;background:linear-gradient(135deg,rgba(30,47,57,0.9),rgba(21,34,41,0.95));border-radius:10px;border:1px solid rgba(162,182,192,0.18);flex-wrap:wrap';
+
+    bar.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="width:36px;height:36px;border-radius:8px;background:rgba(162,182,192,0.12);display:flex;align-items:center;justify-content:center;font-size:17px">📋</div>' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:600;color:var(--brand-cream)">OM Session</div>' +
+          '<div style="font-size:11px;color:var(--brand-gray);margin-top:1px">Save your work or load a previous OM</div>' +
+        '</div>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-      '<button class="btn-sm" onclick="document.getElementById(\'omUploadInput\').click()">\u{1F4E4} Upload OM File</button>' +
-      '<input type="file" id="omUploadInput" accept=".json,.pptx,.pdf" style="display:none" onchange="handleOMUpload(this)">' +
-      '<button class="btn-sm" onclick="exportOMData()">\u{1F4BE} Export as JSON</button></div>';
-    tab0.insertBefore(div, tab0.firstChild);
+        '<button class="btn-sm" onclick="document.getElementById(\'omJsonInput\').click()" style="display:flex;align-items:center;gap:5px">📂 Load OM</button>' +
+        '<input type="file" id="omJsonInput" accept=".json" style="display:none" onchange="handleOMJsonLoad(this)">' +
+        '<button class="btn-sm" onclick="exportOMData()" style="display:flex;align-items:center;gap:5px;background:rgba(162,182,192,0.12);border-color:rgba(162,182,192,0.3)">💾 Save OM</button>' +
+        '<button class="btn-sm" onclick="confirmClearOM()" style="display:flex;align-items:center;gap:5px;background:rgba(231,76,60,0.08);border-color:rgba(231,76,60,0.2);color:#e74c3c">✕ Clear</button>' +
+      '</div>';
+
+    tab0.insertBefore(bar, tab0.firstChild);
   }
+
+  window.handleOMJsonLoad = function(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    var file = input.files[0];
+    if (!file.name.endsWith('.json')) { showGlobalStatus('⚠️ Please upload a .json file saved from this tool'); input.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (typeof window.restoreOMData === 'function') {
+          window.restoreOMData(data);
+          showGlobalStatus('✓ OM loaded — ' + (data.propName1 || 'Untitled') + ' ' + (data.propName2 || ''));
+        }
+      } catch(err) { showGlobalStatus('⚠️ Could not read file: ' + err.message); }
+    };
+    reader.readAsText(file);
+    input.value = '';
+  };
+
+  window.confirmClearOM = function() {
+    if (!confirm('Clear all OM fields and start fresh? This cannot be undone.')) return;
+    var fields = ['propName1','propName2','address','askingPrice','totalUnits','downPayment',
+      'execDesc','callout','noi','grm','propType','yearBuilt','lotSize','parking',
+      'hl1','hl2','hl3','hl4','occupancy','features','curIncome','pfIncome',
+      'mktCity','mktState','mktCounty','mktDesc'];
+    fields.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    showGlobalStatus('OM cleared — ready for new property');
+  };
 
   // ---- INJECT RENT ROLL UPLOAD ----
   function injectRentRollUpload() {
@@ -8259,26 +8422,69 @@ renderPastOMs();
     if (!input.files || !input.files[0]) return;
     var file = input.files[0];
     var ext = file.name.split('.').pop().toLowerCase();
+    t12Status('⏳ Reading ' + file.name + '…', false);
+
     if (ext === 'xlsx' || ext === 'xls') {
-      readXlsxFile(file, function(rows) { parseT12Rows(rows); });
+      readXlsxFile(file, function(rows) {
+        var key = getClaudeKeyGlobal();
+        if (key) {
+          var textFromRows = rows.map(function(r){ return r.join('\t'); }).join('\n');
+          parseT12WithClaude(textFromRows);
+        } else {
+          parseT12Rows(rows);
+        }
+      });
     } else if (ext === 'pdf') {
       var reader = new FileReader();
       reader.onload = function(e) {
         var text = extractPDFText(e.target.result);
         if (!text || text.trim().length < 20) {
-          t12Status('⚠️ Could not extract text from this PDF (may be a scanned image). Try CSV or XLSX for best results.', true);
+          t12Status('⚠️ This PDF appears to be a scanned image — selectable text is required. Try exporting your T12 as CSV or XLSX from your accounting software.', true);
           return;
         }
-        parseFlatTextT12(text);
+        var key = getClaudeKeyGlobal();
+        if (key) {
+          parseT12WithClaude(text);
+        } else {
+          parseFlatTextT12(text);
+        }
       };
       reader.readAsArrayBuffer(file);
     } else {
-      var reader = new FileReader();
-      reader.onload = function(e) { parseT12Rows(parseCSVRows(e.target.result)); };
-      reader.readAsText(file);
+      var reader2 = new FileReader();
+      reader2.onload = function(e) {
+        var key = getClaudeKeyGlobal();
+        if (key) {
+          parseT12WithClaude(e.target.result);
+        } else {
+          parseT12Rows(parseCSVRows(e.target.result));
+        }
+      };
+      reader2.readAsText(file);
     }
     input.value = '';
   };
+
+  function parseT12WithClaude(rawText) {
+    t12Status('✦ AI is reading your T12…', false);
+    var sys = 'You are a commercial real estate financial analyst. The user will give you raw text from a T12 (trailing 12-month) income/expense statement. Extract ALL income line items and ALL expense line items. Return ONLY valid JSON in this exact format, no explanation:\n{"income":[{"label":"Gross Rental Income","amount":123456},...],"expenses":[{"label":"Property Taxes","amount":12000},...]}';
+    var prompt = 'Parse this T12 statement and return the JSON:\n\n' + rawText.slice(0, 8000);
+    claudeRequest(sys, prompt, function(result) {
+      try {
+        var clean = result.replace(/```json?/g,'').replace(/```/g,'').trim();
+        var parsed = JSON.parse(clean);
+        if (!parsed.income && !parsed.expenses) throw new Error('No income or expense data found');
+        applyT12Data(parsed.income || [], parsed.expenses || []);
+        t12Status('✦ AI imported: ' + (parsed.income||[]).length + ' income lines, ' + (parsed.expenses||[]).length + ' expense lines — review all values before export', false);
+        showGlobalStatus('✓ T12 imported via AI — review and adjust as needed');
+      } catch(e) {
+        t12Status('⚠️ AI could not parse this file. Try exporting as CSV from your accounting software.', true);
+      }
+    }, function(err) {
+      t12Status('⚠️ AI error: ' + err + '. Falling back to standard parser.', true);
+      parseFlatTextT12(rawText);
+    });
+  }
 
   // Parse flat text from a PDF T12 into income/expense line items
   function parseFlatTextT12(text) {
@@ -8927,7 +9133,8 @@ renderPastOMs();
 
   // ---- INJECT ABOUT GATEWAY PANEL (TAB 11) ----
   var _gwAdminUnlocked = false;
-  var GW_ADMIN_PASS = 'gw2025';
+  // Password reads from config.js (adminPassword field) → localStorage → fallback
+  var GW_ADMIN_PASS = localStorage.getItem('gw_admin_pass') || (window.CONFIG && window.CONFIG.adminPassword) || 'gateway2025';
 
   function injectGatewayPanel() {
     var container = document.querySelector('#page-multifamily');
@@ -9016,8 +9223,10 @@ renderPastOMs();
   var _gwSupportMembers = [];
 
   window.unlockGatewayEdit = function() {
+    // Re-read dynamically so config.js or localStorage changes take effect immediately
+    var currentPass = localStorage.getItem('gw_admin_pass') || (window.CONFIG && window.CONFIG.adminPassword) || 'gateway2025';
     var pass = prompt('Enter admin password:');
-    if (pass === GW_ADMIN_PASS) {
+    if (pass === currentPass) {
       _gwAdminUnlocked = true;
       // Enable all fields
       ['gw_officePhoto','gw_services','gw_additionalServices','gw_para1','gw_para2',
@@ -11096,6 +11305,9 @@ window.initHomeValuation = initHomeValuation;
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Boot AI status badge
+  renderAIStatusBadge();
+
   loadScheduledPosts();
   var savedToken = (window.CONFIG && window.CONFIG.bufferAccessToken) || localStorage.getItem('buffer_access_token') || '';
   var tokenInput = document.getElementById('buffer-token-input');

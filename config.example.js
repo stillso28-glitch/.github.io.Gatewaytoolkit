@@ -11,8 +11,14 @@ const CONFIG = {
   // Get your access token from the Buffer developer dashboard
   bufferAccessToken: 'YOUR_BUFFER_ACCESS_TOKEN_HERE',
 
-  // Claude API - for AI features (optional)
+  // Claude API - https://console.anthropic.com → API Keys
+  // Set this once and AI features (Executive Summary, Highlights, T12 parsing) activate automatically.
+  // Key is stored locally in the browser — never uploaded anywhere.
   claudeApiKey: '',
+
+  // About Gateway admin password — used to unlock editing of company info in the OM builder
+  // Change this to something memorable. Default: gateway2025
+  adminPassword: 'gateway2025',
 
   // Resend API - for email notifications (optional)
   resendApiKey: '',
