@@ -234,12 +234,15 @@ function renderAgents() {
       '<div class="form-group"><label>Phone</label><input value="'+a.phone+'" onchange="agents['+i+'].phone=this.value"></div>' +
       '<div class="form-group"><label>Licenses</label><input value="'+a.licenses+'" onchange="agents['+i+'].licenses=this.value"></div>' +
       '</div>' +
-      '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap;">' +
-      '<button class="btn-sm" style="font-size:12px;padding:4px 10px;background:#1E3040;border:1px solid #C8A84B;color:#C8A84B;white-space:nowrap;" onclick="saveOMAgentPreset('+i+')">💾 Save</button>' +
-      '<select id="om-agent-load-sel-'+i+'" style="flex:1;min-width:110px;font-size:12px;padding:4px 8px;background:#1a2830;color:#E4E3D4;border:1px solid #2a4050;border-radius:4px;" onchange="loadOMAgentPreset('+i+',this)">' +
-      '<option value="">Load saved agent…</option>' + savedOpts +
+      '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #2a3a48;">' +
+      '<div style="font-size:10px;color:#8A9AAA;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Saved Agents</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+      '<button class="btn-sm" style="font-size:12px;padding:4px 10px;background:#1E3040;border:1px solid #C8A84B;color:#C8A84B;white-space:nowrap;" onclick="saveOMAgentPreset('+i+')">💾 Save to Roster</button>' +
+      '<select id="om-agent-load-sel-'+i+'" style="flex:1;min-width:130px;font-size:12px;padding:4px 8px;background:#1a2830;color:#E4E3D4;border:1px solid #2a4050;border-radius:4px;" onchange="loadOMAgentPreset('+i+',this)">' +
+      '<option value="">— Load saved agent —</option>' + savedOpts +
       '</select>' +
-      '<button class="btn-sm" title="Delete selected agent from roster" style="font-size:12px;padding:4px 9px;background:#1E3040;border:1px solid #7a3030;color:#e07070;white-space:nowrap;" onclick="deleteOMSavedAgent(\'om-agent-load-sel-'+i+'\')">🗑️</button>' +
+      '<button class="btn-sm" title="Delete selected saved agent" style="font-size:12px;padding:4px 9px;background:#1E3040;border:1px solid #7a3030;color:#e07070;white-space:nowrap;" onclick="deleteOMSavedAgent(\'om-agent-load-sel-'+i+'\')">🗑️</button>' +
+      '</div>' +
       '</div>';
     container.appendChild(card);
   });
@@ -745,55 +748,58 @@ function generateOM() {
     addGoldLine(s4, r4x, 0.64, r4w);
     s4.addText(v('propDesc'), {x:r4x, y:0.74, w:r4w, h:1.18, fontSize:7.5, fontFace:'Arial', color:BD, lineSpacingMultiple:1.45});
 
-    // Unit mix — compact horizontal rows, no addTable(), always 5 cols
-    s4.addText('UNIT MIX', {x:r4x, y:2.06, w:r4w, h:0.22, fontSize:9, fontFace:'Arial', color:NV, bold:true, charSpacing:0.3});
+    // Unit mix table — uses addTable for reliable cross-viewer rendering
+    s4.addText('UNIT MIX', {x:r4x, y:2.06, w:r4w, h:0.22, fontSize:9, fontFace:'Arial', color:NV, bold:true});
     addGoldLine(s4, r4x, 2.28, r4w);
 
     var totalAllRent = unitData.reduce(function(s,r){ return s + r.units * r.rent; }, 0);
-    var umCols   = [2.0, 0.85, 1.2, 1.55, 1.05];
-    var umLabels = ['UNIT TYPE', 'UNITS', 'RENT / MO', 'MONTHLY TOTAL', '% MIX'];
+    var umColW  = [2.0, 0.85, 1.2, 1.55, 1.05]; // must sum to r4w (6.65)
     var umVisRows = unitData.filter(function(u){ return u.type || u.units > 0; });
-    var umRowH   = umVisRows.length <= 4 ? 0.26 : (umVisRows.length <= 6 ? 0.22 : 0.18);
+    var umRowH  = umVisRows.length <= 4 ? 0.26 : (umVisRows.length <= 6 ? 0.22 : 0.18);
     var umStartY = 2.34;
-    var umCurX;
+    var totUnits = unitData.reduce(function(s,u){ return s + u.units; }, 0);
 
-    // Header row
-    umCurX = r4x;
-    umLabels.forEach(function(lbl, ci) {
-      s4.addShape('rect', {x:umCurX, y:umStartY, w:umCols[ci], h:umRowH, fill:{color:NV}});
-      s4.addText(lbl, {x:umCurX+0.04, y:umStartY, w:umCols[ci]-0.08, h:umRowH, align:ci===0?'left':'center', valign:'middle', fontSize:6.5, fontFace:'Arial', color:GOLD, bold:true, charSpacing:0.4});
-      umCurX += umCols[ci];
-    });
-
-    // Data rows
+    // Build table rows: header + data + totals
+    var hdrCell = function(txt, al) {
+      return { text: txt, options: { fill:{color:NV}, color:GOLD, bold:true, fontSize:6.5, fontFace:'Arial', align:al||'center', valign:'middle', border:{type:'none'} } };
+    };
+    var umTableRows = [
+      [ hdrCell('UNIT TYPE','left'), hdrCell('UNITS'), hdrCell('RENT/MO'), hdrCell('MONTHLY TOTAL'), hdrCell('% MIX') ]
+    ];
     umVisRows.forEach(function(u, ri) {
-      var ry  = umStartY + (ri + 1) * umRowH;
       var bg  = ri % 2 === 0 ? PL : PM;
       var tr2 = u.units * u.rent;
       var pct = totalAllRent > 0 ? ((tr2 / totalAllRent) * 100).toFixed(0) : '0';
-      var cells = [u.type, ''+u.units, '$'+u.rent.toLocaleString(), '$'+tr2.toLocaleString(), pct+'%'];
-      umCurX = r4x;
-      cells.forEach(function(c, ci) {
-        s4.addShape('rect', {x:umCurX, y:ry, w:umCols[ci], h:umRowH, fill:{color:bg}});
-        s4.addText(c, {x:umCurX+0.04, y:ry, w:umCols[ci]-0.08, h:umRowH, align:ci===0?'left':'center', valign:'middle', fontSize:8, fontFace:'Arial', color:ci===0?NV:BD, bold:ci===0});
-        umCurX += umCols[ci];
-      });
+      var dc  = function(txt, al, clr, bld) {
+        return { text: txt, options: { fill:{color:bg}, color:clr||BD, bold:!!bld, fontSize:8, fontFace:'Arial', align:al||'center', valign:'middle', border:{type:'none'} } };
+      };
+      umTableRows.push([
+        dc(u.type, 'left', NV, true),
+        dc(''+u.units),
+        dc('$'+u.rent.toLocaleString()),
+        dc('$'+tr2.toLocaleString()),
+        dc(pct+'%')
+      ]);
+    });
+    if (umVisRows.length > 0) {
+      var tc = function(txt) {
+        return { text: txt, options: { fill:{color:NV2}, color:WH, bold:true, fontSize:8, fontFace:'Arial', align:'center', valign:'middle', border:{type:'none'} } };
+      };
+      umTableRows.push([ tc('TOTAL'), tc(''+totUnits), tc(''), tc('$'+totalAllRent.toLocaleString()), tc('100%') ]);
+    }
+
+    s4.addTable(umTableRows, {
+      x: r4x, y: umStartY, w: r4w,
+      rowH: umRowH,
+      colW: umColW,
+      border: {type:'none'},
+      autoPage: false
     });
 
-    // Totals row
+    // Summary metric boxes if there is room above the features strip
     if (umVisRows.length > 0) {
-      var totRowY  = umStartY + (umVisRows.length + 1) * umRowH;
-      var totUnits = unitData.reduce(function(s,u){ return s + u.units; }, 0);
-      var totCells = ['TOTAL', ''+totUnits, '', '$'+totalAllRent.toLocaleString(), '100%'];
-      umCurX = r4x;
-      totCells.forEach(function(c, ci) {
-        s4.addShape('rect', {x:umCurX, y:totRowY, w:umCols[ci], h:umRowH, fill:{color:NV2}});
-        s4.addText(c, {x:umCurX+0.04, y:totRowY, w:umCols[ci]-0.08, h:umRowH, align:'center', valign:'middle', fontSize:8, fontFace:'Arial', color:WH, bold:true});
-        umCurX += umCols[ci];
-      });
-
-      // Summary metric boxes if there is room above the features strip
-      var boxY = totRowY + umRowH + 0.16;
+      var totRowY = umStartY + (umVisRows.length + 2) * umRowH;
+      var boxY = totRowY + 0.16;
       if (boxY + 0.72 < 5.05) {
         var annRent = totalAllRent * 12;
         var sbW = r4w / 3 - 0.1;
