@@ -3285,7 +3285,7 @@ renderPastOMs();
 
   window.wizAIDraft = function() {
     if (!window.GatewayAPI || !window.GatewayAPI.claudeAvailable()) {
-      alert('AI not configured. Add claudeApiKey to config.js or set up the proxy.');
+      if (typeof openAISetup === 'function') openAISetup();
       return;
     }
     var btn = document.getElementById('wz-ai-btn');
@@ -3342,7 +3342,7 @@ renderPastOMs();
       }
     }).catch(function(err) {
       alert('AI error: ' + err);
-    }).finally ? window.GatewayAPI.claude(systemPrompt, userPrompt).then(function(){}).catch(function(){}) : null;
+    });
     // Re-enable button after a delay
     setTimeout(function() {
       var b = document.getElementById('wz-ai-btn');
