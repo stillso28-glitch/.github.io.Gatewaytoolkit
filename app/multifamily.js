@@ -743,67 +743,68 @@ function generateOM() {
 
     s4.addText('Property Overview', {x:r4x, y:0.22, w:r4w, h:0.4, fontSize:20, fontFace:'Georgia', color:NV, bold:true});
     addGoldLine(s4, r4x, 0.64, r4w);
-    s4.addText(v('propDesc'), {x:r4x, y:0.74, w:r4w, h:0.70, fontSize:8, fontFace:'Arial', color:BD, lineSpacingMultiple:1.35});
+    s4.addText(v('propDesc'), {x:r4x, y:0.74, w:r4w, h:1.18, fontSize:7.5, fontFace:'Arial', color:BD, lineSpacingMultiple:1.45});
 
-    // Unit mix table
-    s4.addText('UNIT MIX & RENT SCHEDULE', {x:r4x, y:1.54, w:r4w, h:0.25, fontSize:9.5, fontFace:'Arial', color:NV, bold:true, charSpacing:0.3});
-    addGoldLine(s4, r4x, 1.79, r4w);
+    // Unit mix — compact horizontal rows, no addTable(), always 5 cols
+    s4.addText('UNIT MIX', {x:r4x, y:2.06, w:r4w, h:0.22, fontSize:9, fontFace:'Arial', color:NV, bold:true, charSpacing:0.3});
+    addGoldLine(s4, r4x, 2.28, r4w);
 
     var totalAllRent = unitData.reduce(function(s,r){ return s + r.units * r.rent; }, 0);
-    var hasSqFt = showSqFt;
-    var umHeaderCols = hasSqFt
-      ? ['UNIT TYPE', 'UNITS', 'SQ FT', 'RENT/MO', '$/SQFT', 'TOTAL', '% MIX']
-      : ['UNIT TYPE', 'UNITS', 'RENT/MO', 'TOTAL RENT', '% MIX'];
-    var umColWidths = hasSqFt
-      ? [1.4, 0.65, 0.88, 1.0, 0.88, 1.1, 0.74]
-      : [1.9, 0.95, 1.3, 1.6, 0.9];
-    // Manual table render — bypasses PptxGenJS addTable rendering artifacts
-    var umRowH  = 0.28;
-    var umTblY  = 1.86;
+    var umCols   = [2.0, 0.85, 1.2, 1.55, 1.05];
+    var umLabels = ['UNIT TYPE', 'UNITS', 'RENT / MO', 'MONTHLY TOTAL', '% MIX'];
+    var umVisRows = unitData.filter(function(u){ return u.type || u.units > 0; });
+    var umRowH   = umVisRows.length <= 4 ? 0.26 : (umVisRows.length <= 6 ? 0.22 : 0.18);
+    var umStartY = 2.34;
     var umCurX;
 
     // Header row
     umCurX = r4x;
-    umHeaderCols.forEach(function(h, ci) {
-      var cw = umColWidths[ci];
-      s4.addShape('rect', {x:umCurX, y:umTblY, w:cw, h:umRowH, fill:{color:NV}});
-      s4.addText(h, {x:umCurX+0.04, y:umTblY, w:cw-0.08, h:umRowH, align:'center', valign:'middle', fontSize:7, fontFace:'Arial', color:WH, bold:true});
-      umCurX += cw;
+    umLabels.forEach(function(lbl, ci) {
+      s4.addShape('rect', {x:umCurX, y:umStartY, w:umCols[ci], h:umRowH, fill:{color:NV}});
+      s4.addText(lbl, {x:umCurX+0.04, y:umStartY, w:umCols[ci]-0.08, h:umRowH, align:ci===0?'left':'center', valign:'middle', fontSize:6.5, fontFace:'Arial', color:GOLD, bold:true, charSpacing:0.4});
+      umCurX += umCols[ci];
     });
 
     // Data rows
-    var umVisRows = unitData.filter(function(u){ return u.type || u.units > 0; });
     umVisRows.forEach(function(u, ri) {
-      var ry   = umTblY + (ri + 1) * umRowH;
-      var bg   = ri % 2 === 0 ? PL : PM;
-      var rpsf = u.sqft > 0 ? (u.rent / u.sqft).toFixed(2) : '0.00';
-      var tr2  = u.units * u.rent;
-      var pct  = totalAllRent > 0 ? ((tr2 / totalAllRent) * 100).toFixed(0) : '0';
-      var cells = hasSqFt
-        ? [u.type, ''+u.units, u.sqft.toLocaleString(), '$'+u.rent, '$'+rpsf, '$'+tr2.toLocaleString(), pct+'%']
-        : [u.type, ''+u.units, '$'+u.rent, '$'+tr2.toLocaleString(), pct+'%'];
+      var ry  = umStartY + (ri + 1) * umRowH;
+      var bg  = ri % 2 === 0 ? PL : PM;
+      var tr2 = u.units * u.rent;
+      var pct = totalAllRent > 0 ? ((tr2 / totalAllRent) * 100).toFixed(0) : '0';
+      var cells = [u.type, ''+u.units, '$'+u.rent.toLocaleString(), '$'+tr2.toLocaleString(), pct+'%'];
       umCurX = r4x;
       cells.forEach(function(c, ci) {
-        var cw = umColWidths[ci];
-        s4.addShape('rect', {x:umCurX, y:ry, w:cw, h:umRowH, fill:{color:bg}});
-        s4.addText(c, {x:umCurX+0.04, y:ry, w:cw-0.08, h:umRowH, align:ci===0?'left':'center', valign:'middle', fontSize:7.5, fontFace:'Arial', color:ci===0?NV:BD, bold:ci===0});
-        umCurX += cw;
+        s4.addShape('rect', {x:umCurX, y:ry, w:umCols[ci], h:umRowH, fill:{color:bg}});
+        s4.addText(c, {x:umCurX+0.04, y:ry, w:umCols[ci]-0.08, h:umRowH, align:ci===0?'left':'center', valign:'middle', fontSize:8, fontFace:'Arial', color:ci===0?NV:BD, bold:ci===0});
+        umCurX += umCols[ci];
       });
     });
 
     // Totals row
     if (umVisRows.length > 0) {
-      var totRowY  = umTblY + (umVisRows.length + 1) * umRowH;
-      var totCells = hasSqFt
-        ? ['TOTAL', ''+unitData.reduce(function(s,u){return s+u.units;},0), '', '', '', '$'+totalAllRent.toLocaleString(), '100%']
-        : ['TOTAL', ''+unitData.reduce(function(s,u){return s+u.units;},0), '', '$'+totalAllRent.toLocaleString(), '100%'];
+      var totRowY  = umStartY + (umVisRows.length + 1) * umRowH;
+      var totUnits = unitData.reduce(function(s,u){ return s + u.units; }, 0);
+      var totCells = ['TOTAL', ''+totUnits, '', '$'+totalAllRent.toLocaleString(), '100%'];
       umCurX = r4x;
       totCells.forEach(function(c, ci) {
-        var cw = umColWidths[ci];
-        s4.addShape('rect', {x:umCurX, y:totRowY, w:cw, h:umRowH, fill:{color:NV2}});
-        s4.addText(c, {x:umCurX+0.04, y:totRowY, w:cw-0.08, h:umRowH, align:'center', valign:'middle', fontSize:7.5, fontFace:'Arial', color:WH, bold:true});
-        umCurX += cw;
+        s4.addShape('rect', {x:umCurX, y:totRowY, w:umCols[ci], h:umRowH, fill:{color:NV2}});
+        s4.addText(c, {x:umCurX+0.04, y:totRowY, w:umCols[ci]-0.08, h:umRowH, align:'center', valign:'middle', fontSize:8, fontFace:'Arial', color:WH, bold:true});
+        umCurX += umCols[ci];
       });
+
+      // Summary metric boxes if there is room above the features strip
+      var boxY = totRowY + umRowH + 0.16;
+      if (boxY + 0.72 < 5.05) {
+        var annRent = totalAllRent * 12;
+        var sbW = r4w / 3 - 0.1;
+        [
+          {val:''+totUnits,         label:'TOTAL UNITS'},
+          {val:fmtK(totalAllRent),  label:'MONTHLY INCOME'},
+          {val:fmtK(annRent),       label:'ANNUAL INCOME'}
+        ].forEach(function(sb, i) {
+          addGoldMetricBox(s4, r4x + i * (sbW + 0.15), boxY, sbW, 0.68, sb.val, sb.label);
+        });
+      }
     }
 
     // Features strip
