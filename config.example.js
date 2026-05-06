@@ -1,32 +1,44 @@
-// Gateway Agent Toolkit - API Configuration Template
+// Gateway Agent Toolkit — Configuration
 //
-// INSTRUCTIONS:
-// 1. Copy this file and rename it to "config.js"
-// 2. Replace all placeholder values with your actual API keys
-// 3. NEVER commit config.js to GitHub (it's in .gitignore)
+// SETUP:
+//   1. Copy this file → rename to "config.js"
+//   2. Fill in your values
+//   3. NEVER commit config.js (it's in .gitignore)
+//
+// TEAM SETUP (recommended for offices with 2+ agents):
+//   Deploy gateway-proxy/ to Vercel, then set proxyUrl + proxySecret below.
+//   Agents don't need individual API keys — everything routes through the proxy.
 
 const CONFIG = {
 
-  // Buffer API - https://buffer.com/developers/apps
-  // Get your access token from the Buffer developer dashboard
-  bufferAccessToken: 'YOUR_BUFFER_ACCESS_TOKEN_HERE',
+  // ── API Proxy (recommended for teams) ───────────────────────────
+  // Deploy gateway-proxy/ to Vercel, then paste the URL here.
+  // When set, Claude and Buffer calls route through the proxy — no
+  // per-agent API keys needed.
+  proxyUrl:    '',   // e.g. 'https://gateway-api-proxy.vercel.app'
+  proxySecret: '',   // Must match GATEWAY_SECRET in your Vercel env vars
 
-  // Claude API - https://console.anthropic.com → API Keys
-  // Set this once and AI features (Executive Summary, Highlights, T12 parsing) activate automatically.
-  // Key is stored locally in the browser — never uploaded anywhere.
+  // ── Claude API (only needed without proxy) ───────────────────────
+  // Get from https://console.anthropic.com/api-keys
+  // When proxyUrl is set above, this is ignored.
   claudeApiKey: '',
 
-  // About Gateway admin password — used to unlock editing of company info in the OM builder
-  // Change this to something memorable. Default: gateway2025
+  // ── Buffer API (only needed without proxy) ───────────────────────
+  // Get from https://buffer.com/developers/apps
+  // When proxyUrl is set above, this is ignored.
+  bufferAccessToken: '',
+
+  // ── Office Settings ──────────────────────────────────────────────
+  // Admin password to unlock company info editing in the OM builder
   adminPassword: 'gateway2025',
 
-  // Resend API - for email notifications (optional)
+  // Resend API key for email notifications (optional)
   resendApiKey: '',
 
   // Google Analytics (optional)
   googleAnalyticsId: '',
 
-  // Gateway Office Address
+  // Office address shown in generated documents
   officeAddress: '700 Nebraska Street, Sioux City, IA'
 
 };

@@ -2499,160 +2499,127 @@ function downloadSocialSquare() {
 
 // ===================================================================
 // BUFFER API INTEGRATION
+// Delegates to GatewayAPI (app/api.js) which handles proxy vs. direct.
+// When proxyUrl is set in config.js, no token input is needed — the
+// brokerage key lives in Vercel env vars and all agents share it.
 // ===================================================================
 
 function getBufferToken() {
   var inputEl = document.getElementById('buffer-token-input');
   var fromInput = inputEl ? inputEl.value.trim() : '';
   if (fromInput) return fromInput;
-  if (window.CONFIG && window.CONFIG.bufferAccessToken) return window.CONFIG.bufferAccessToken;
+  if (window.CONFIG && window.CONFIG.bufferAccessToken &&
+      window.CONFIG.bufferAccessToken !== 'YOUR_BUFFER_ACCESS_TOKEN_HERE') {
+    return window.CONFIG.bufferAccessToken;
+  }
   return localStorage.getItem('buffer_access_token') || '';
 }
 
-// Buffer's v1 API blocks direct browser requests (CORS). Try direct first,
-// then fall through multiple proxy services until one works.
-// Auth is via Authorization: Bearer header per the new api.buffer.com spec.
-async function bufferFetch(url, options) {
-  var isPost = !!(options && options.method && options.method.toUpperCase() === 'POST');
-
-  // 1. Direct request
-  try { return await fetch(url, options); } catch(e) {}
-
-  // 2. allorigins.win — reliable GET proxy, returns raw body
-  if (!isPost) {
-    try { return await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url)); } catch(e) {}
-  }
-
-  // 3. corsproxy.io — supports GET and POST
-  try { return await fetch('https://corsproxy.io/?' + encodeURIComponent(url), options); } catch(e) {}
-
-  // 4. cors-anywhere (Heroku demo) — last resort for POST
-  if (isPost) {
-    try {
-      var hdrs = Object.assign({'X-Requested-With': 'XMLHttpRequest'}, (options.headers || {}));
-      return await fetch('https://cors-anywhere.herokuapp.com/' + url,
-        Object.assign({}, options, {headers: hdrs}));
-    } catch(e) {}
-  }
-
-  throw new Error('Buffer API unreachable — all proxy routes failed');
-}
-
-// Build fetch options with Bearer auth header
-function bufferOpts(token, extra) {
-  var opts = Object.assign({headers: {}}, extra);
-  opts.headers = Object.assign({'Authorization': 'Bearer ' + token}, opts.headers);
-  return opts;
-}
-
 async function testBufferConnection() {
-  var token = getBufferToken();
-  if (!token) {
-    showGlobalStatus('⚠️ Paste your Buffer access token above and click Connect');
-    return;
-  }
-  var dot = document.getElementById('buffer-dot');
+  var dot        = document.getElementById('buffer-dot');
   var statusText = document.getElementById('buffer-status-text');
   var connectBtn = document.getElementById('buffer-connect-btn');
   var refreshBtn = document.getElementById('buffer-refresh-btn');
   var tokenInput = document.getElementById('buffer-token-input');
-  statusText.textContent = 'Connecting...';
-  statusText.style.color = '#C8A84B';
+
+  // If no proxy and no token, ask agent to paste one
+  var usingProxy = !!(window.GatewayAPI && window.GatewayAPI.proxyUrl());
+  if (!usingProxy && !getBufferToken()) {
+    showGlobalStatus('⚠️ Paste your Buffer access token above and click Connect');
+    return;
+  }
+
+  if (statusText) { statusText.textContent = 'Connecting...'; statusText.style.color = '#C8A84B'; }
+
   try {
-    var resp = await bufferFetch('https://api.buffer.com/1/user.json', bufferOpts(token));
-    var data;
-    try { data = await resp.json(); } catch(je) { data = {}; }
-    if ((!resp.ok) || data.code === 1010 || data.error) {
-      handleBufferError({status: resp.status || data.code, message: data.error}, 'connection');
-      return;
-    }
-    localStorage.setItem('buffer_access_token', token);
+    // Save locally typed token so GatewayAPI direct-mode can use it
+    var typedToken = tokenInput ? tokenInput.value.trim() : '';
+    if (typedToken) localStorage.setItem('buffer_access_token', typedToken);
+
+    var result = await window.GatewayAPI.bufferProfiles();
+    var profiles = result.profiles || [];
+
     if (tokenInput) tokenInput.style.display = 'none';
-    dot.className = 'buffer-dot on';
-    statusText.textContent = 'Connected as ' + (data.name || data.email || 'Buffer User');
-    statusText.style.color = '#27AE60';
-    connectBtn.textContent = '✓ Connected';
-    connectBtn.disabled = true;
+    if (dot) dot.className = 'buffer-dot on';
+    var label = usingProxy ? 'Connected via Gateway Proxy' : ('Connected — ' + profiles.length + ' profile(s)');
+    if (statusText) { statusText.textContent = label; statusText.style.color = '#27AE60'; }
+    if (connectBtn) { connectBtn.textContent = '✓ Connected'; connectBtn.disabled = true; }
     if (refreshBtn) refreshBtn.style.display = 'inline-block';
-    await loadBufferProfiles(token);
+
+    renderBufferProfiles(profiles);
+    loadScheduledPosts();
   } catch(e) {
     if (dot) dot.className = 'buffer-dot off';
-    statusText.textContent = '⚠️ Buffer API unreachable — use manual mode below';
-    statusText.style.color = '#E74C3C';
+    var errMsg = '⚠️ Buffer: ' + (e.message || 'Could not connect');
+    if (statusText) { statusText.textContent = errMsg; statusText.style.color = '#E74C3C'; }
     showBufferManualFallback();
   }
 }
 
-async function loadBufferProfiles(token) {
-  token = token || getBufferToken();
-  if (!token) return;
+async function loadBufferProfiles() {
   try {
-    var resp = await bufferFetch('https://api.buffer.com/1/profiles.json', bufferOpts(token));
-    if (!resp.ok) { handleBufferError({status: resp.status}, 'profiles'); return; }
-    var profiles = await resp.json();
-    var wrap = document.getElementById('buffer-profiles-wrap');
-    var list = document.getElementById('buffer-profiles-list');
-    var smBtn = document.getElementById('sm-buffer-btn');
-    if (!list) return;
-    list.innerHTML = '';
-    profiles.forEach(function(p) {
-      var item = document.createElement('label');
-      item.className = 'buffer-profile-item';
-      item.innerHTML = '<input type="checkbox" name="buffer-profile" value="' + p.id + '" checked> ' +
-        '<span style="font-weight:700">' + p.formatted_service + '</span> &mdash; ' + (p.formatted_username || p.service_username);
-      list.appendChild(item);
-    });
-    if (wrap) wrap.classList.add('show');
-    if (smBtn) smBtn.style.display = 'inline-block';
-    showGlobalStatus('✅ Loaded ' + profiles.length + ' Buffer profile(s)');
+    var result = await window.GatewayAPI.bufferProfiles();
+    renderBufferProfiles(result.profiles || []);
     loadScheduledPosts();
   } catch(e) {
     handleBufferError({message: e.message}, 'profiles');
   }
 }
 
+function renderBufferProfiles(profiles) {
+  var wrap  = document.getElementById('buffer-profiles-wrap');
+  var list  = document.getElementById('buffer-profiles-list');
+  var smBtn = document.getElementById('sm-buffer-btn');
+  if (!list) return;
+  list.innerHTML = '';
+  profiles.forEach(function(p) {
+    var item = document.createElement('label');
+    item.className = 'buffer-profile-item';
+    var svcLabel = (p.service || '').charAt(0).toUpperCase() + (p.service || '').slice(1);
+    item.innerHTML = '<input type="checkbox" name="buffer-profile" value="' + p.id + '" checked> ' +
+      '<span style="font-weight:700">' + svcLabel + '</span> &mdash; ' + (p.handle || p.id);
+    list.appendChild(item);
+  });
+  if (wrap) wrap.classList.add('show');
+  if (smBtn) smBtn.style.display = 'inline-block';
+  showGlobalStatus('✅ Loaded ' + profiles.length + ' Buffer profile(s)');
+}
+
 async function schedulePostToBuffer(sendNow) {
-  var token = getBufferToken();
-  if (!token) { showGlobalStatus('⚠️ Buffer not connected — paste your token and click Connect'); return; }
+  if (!window.GatewayAPI || !window.GatewayAPI.bufferAvailable()) {
+    showGlobalStatus('⚠️ Buffer not configured — set proxyUrl in config.js or paste your token and connect');
+    return;
+  }
   var caption = (document.getElementById('sm-caption') || {}).value || '';
   var heading = (document.getElementById('sm-heading') || {}).value || 'Property';
   if (!caption) caption = heading + ' — Listed by Gateway Real Estate Advisors | Sioux City, IA';
+
   var profileCheckboxes = document.querySelectorAll('input[name="buffer-profile"]:checked');
   if (!profileCheckboxes.length) { showGlobalStatus('⚠️ Select at least one Buffer profile'); return; }
   var profileIds = Array.from(profileCheckboxes).map(function(cb) { return cb.value; });
+
   var schedTime = sendNow ? null : (document.getElementById('buffer-schedule-time') || {}).value;
-  var canvas = document.getElementById('sm-canvas');
-  var mediaDataUrl = canvas ? canvas.toDataURL('image/png') : null;
+  var scheduledAt = (schedTime && !sendNow) ? new Date(schedTime).toISOString() : null;
+
   var schedBtn = document.getElementById('buffer-sched-btn');
   if (schedBtn) { schedBtn.disabled = true; schedBtn.textContent = sendNow ? 'Sending...' : 'Scheduling...'; }
+
   try {
-    var results = [];
-    for (var i = 0; i < profileIds.length; i++) {
-      var body = new URLSearchParams();
-      body.append('profile_ids[]', profileIds[i]);
-      body.append('text', caption);
-      if (schedTime && !sendNow) {
-        body.append('scheduled_at', new Date(schedTime).toISOString());
-      }
-      if (sendNow) body.append('now', 'true');
-      var resp = await bufferFetch('https://api.buffer.com/1/updates/create.json',
-        bufferOpts(token, {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: body.toString()}));
-      if (!resp.ok) { handleBufferError({status: resp.status}, 'schedule'); continue; }
-      var result = await resp.json();
-      results.push(result);
-    }
-    if (results.length) {
-      var postRecord = {
+    var result = await window.GatewayAPI.bufferPost(profileIds, caption, null, scheduledAt);
+    var count = (result.results || []).length;
+    if (count > 0) {
+      addToScheduledPosts({
         id: Date.now(),
         caption: caption,
         profiles: profileIds.length,
         scheduledAt: sendNow ? 'Now' : (schedTime || 'Queued'),
         status: sendNow ? 'Sent' : 'Scheduled',
-        thumb: mediaDataUrl ? mediaDataUrl.substring(0, 60) + '...' : null,
         ts: new Date().toLocaleString()
-      };
-      addToScheduledPosts(postRecord);
-      showGlobalStatus(sendNow ? '✅ Sent to ' + results.length + ' profile(s)!' : '✅ Scheduled on ' + results.length + ' profile(s)!');
+      });
+      showGlobalStatus(sendNow ? '✅ Sent to ' + count + ' profile(s)!' : '✅ Scheduled on ' + count + ' profile(s)!');
+    }
+    if (result.errors && result.errors.length) {
+      result.errors.forEach(function(e) { handleBufferError({message: e.error}, 'schedule'); });
     }
   } catch(e) {
     handleBufferError(e, 'schedule');

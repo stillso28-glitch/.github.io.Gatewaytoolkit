@@ -2857,36 +2857,584 @@ renderPastOMs();
   window.renderEmployers = renderEmployers;
   window.renderIndustries = renderIndustries;
 
-  // ---- CLAUDE API HELPER ----
+  // ---- CLAUDE API HELPER — delegates to GatewayAPI (app/api.js) ----
   function getClaudeKey() {
     return (localStorage.getItem('gw_claude_api_key') || (window.CONFIG && window.CONFIG.claudeApiKey) || '').trim();
   }
 
   function claudeRequest(systemPrompt, userPrompt, onResult, onError) {
-    var key = getClaudeKey();
-    if (!key) { onError('No API key provided.'); return; }
-    fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }]
-      })
-    }).then(function(r) {
-      if (!r.ok) { return r.json().then(function(e){ throw new Error(e.error && e.error.message || ('HTTP ' + r.status)); }); }
-      return r.json();
-    }).then(function(data) {
-      var text = data.content && data.content[0] && data.content[0].text || '';
-      onResult(text.trim());
-    }).catch(function(err) { onError(err.message || String(err)); });
+    if (window.GatewayAPI) {
+      window.GatewayAPI.claudeRequest(systemPrompt, userPrompt, onResult, onError);
+    } else {
+      onError('GatewayAPI not loaded. Check that app/api.js is included in index.html.');
+    }
   }
+
+  // ---- OM QUICK WIZARD ----
+  function injectOMWizard() {
+    if (document.getElementById('om-wizard-overlay')) return;
+
+    // Inject launch button above the template picker
+    var tplRow = document.getElementById('tpl-pick-row');
+    if (tplRow && tplRow.parentNode) {
+      var launchWrap = document.createElement('div');
+      launchWrap.style.cssText = 'display:flex;align-items:center;margin-bottom:4px;margin-top:8px';
+      launchWrap.innerHTML =
+        '<button class="om-quick-create-btn" onclick="window.openOMWizard()">' +
+          '⚡ Quick Create OM' +
+        '</button>' +
+        '<span class="om-quick-create-tip">5 steps · under 5 minutes</span>';
+      tplRow.parentNode.insertBefore(launchWrap, tplRow);
+    }
+
+    var el = document.createElement('div');
+    el.id = 'om-wizard-overlay';
+    el.className = 'om-wizard-overlay';
+    el.innerHTML = [
+      '<div class="om-wizard-modal" onclick="event.stopPropagation()">',
+
+      // Header
+      '<div class="wiz-header">',
+        '<h2>OM Quick Create &nbsp;<span style="font-size:13px;font-weight:400;color:#A2B6C0;font-family:Arial,sans-serif">Fill 5 steps · generate in seconds</span></h2>',
+        '<div class="wiz-steps-bar">',
+          '<div class="wiz-step-pill active" id="wzpill-1">1 · PROPERTY</div>',
+          '<div class="wiz-step-pill" id="wzpill-2">2 · DEAL</div>',
+          '<div class="wiz-step-pill" id="wzpill-3">3 · FINANCIALS</div>',
+          '<div class="wiz-step-pill" id="wzpill-4">4 · MARKET</div>',
+          '<div class="wiz-step-pill" id="wzpill-5">5 · MEDIA</div>',
+        '</div>',
+      '</div>',
+
+      // Body
+      '<div class="wiz-body">',
+
+        // Step 1 — Property
+        '<div class="wiz-step-content active" id="wzstep-1">',
+          '<div class="wiz-section">PROPERTY IDENTITY</div>',
+          '<div class="wiz-grid">',
+            '<div class="wiz-field"><label>Name Line 1 <span>cover slide headline</span></label><input id="wz-name1" placeholder="e.g. OAKRIDGE"></div>',
+            '<div class="wiz-field"><label>Name Line 2 <span>optional subtitle</span></label><input id="wz-name2" placeholder="e.g. APARTMENTS"></div>',
+            '<div class="wiz-field full"><label>Full Address</label><input id="wz-address" placeholder="1302 Grand Plaza Drive, Spencer IA 51301"></div>',
+            '<div class="wiz-field"><label>Property Type</label>',
+              '<select id="wz-type">',
+                '<option>Multifamily</option>',
+                '<option>Mixed-Use</option>',
+                '<option>Duplex / Triplex</option>',
+                '<option>Commercial</option>',
+                '<option>Single Family</option>',
+              '</select>',
+            '</div>',
+            '<div class="wiz-field"><label>Year Built</label><input id="wz-yearbuilt" type="number" placeholder="1985"></div>',
+            '<div class="wiz-field"><label>Total Units</label><input id="wz-units" type="number" placeholder="12" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Occupancy</label><input id="wz-occ" placeholder="100%" value="100%"></div>',
+            '<div class="wiz-field"><label>Parking</label><input id="wz-parking" placeholder="Off-street, 1/unit"></div>',
+          '</div>',
+          '<div class="wiz-section">LOT & FEATURES</div>',
+          '<div class="wiz-grid">',
+            '<div class="wiz-field"><label>Lot Size</label><input id="wz-lot" placeholder="0.8 acres"></div>',
+            '<div class="wiz-field"><label>Features <span>comma-separated</span></label><input id="wz-feats" placeholder="Laundry, Storage, Off-street parking"></div>',
+          '</div>',
+        '</div>',
+
+        // Step 2 — Deal metrics + unit mix
+        '<div class="wiz-step-content" id="wzstep-2">',
+          '<div class="wiz-section">DEAL METRICS</div>',
+          '<div class="wiz-grid cols-3">',
+            '<div class="wiz-field"><label>Asking Price ($)</label><input id="wz-price" type="number" placeholder="1250000" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Down Payment ($)</label><input id="wz-down" type="number" placeholder="312500"></div>',
+            '<div class="wiz-field"><label>Property Desc.</label></div>',
+          '</div>',
+          '<div class="wiz-section">UNIT MIX <span style="font-weight:400;font-size:10px;color:#8A8A88;letter-spacing:0"> — one row per unit type</span></div>',
+          '<table class="wiz-unit-table" id="wz-unit-table">',
+            '<thead><tr>',
+              '<th>Type (e.g. 1BD/1BA)</th>',
+              '<th># Units</th>',
+              '<th>Monthly Rent ($)</th>',
+              '<th>Sq Ft</th>',
+              '<th></th>',
+            '</tr></thead>',
+            '<tbody id="wz-unit-body"></tbody>',
+          '</table>',
+          '<button class="wiz-add-unit-row" onclick="wizAddUnitRow()">+ Add Unit Type</button>',
+          '<div class="wiz-noi-box" style="margin-top:4px">',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val" id="wz-preview-gri">$0</div><div class="wiz-noi-lbl">GROSS RENT / MO</div></div>',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val" id="wz-preview-units">0</div><div class="wiz-noi-lbl">TOTAL UNITS</div></div>',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val" id="wz-preview-ppu">$0</div><div class="wiz-noi-lbl">PRICE / UNIT</div></div>',
+          '</div>',
+        '</div>',
+
+        // Step 3 — Financials
+        '<div class="wiz-step-content" id="wzstep-3">',
+          '<div class="wiz-noi-box">',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val" id="wz-noi-egi">$0</div><div class="wiz-noi-lbl">ANN. GROSS INCOME</div></div>',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val" id="wz-noi-exp">$0</div><div class="wiz-noi-lbl">ANN. EXPENSES</div></div>',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val gold" id="wz-noi-noi">$0</div><div class="wiz-noi-lbl">NET OPR. INCOME</div></div>',
+            '<div class="wiz-noi-item"><div class="wiz-noi-val gold" id="wz-noi-cap">0%</div><div class="wiz-noi-lbl">CAP RATE</div></div>',
+          '</div>',
+          '<div class="wiz-section">ANNUAL INCOME</div>',
+          '<div class="wiz-grid">',
+            '<div class="wiz-field"><label>Annual Gross Rent <span>auto from unit mix</span></label><input id="wz-gross-rent" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Other Income (annual)</label><input id="wz-other-inc" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+          '</div>',
+          '<div class="wiz-section">ANNUAL EXPENSES</div>',
+          '<div class="wiz-grid">',
+            '<div class="wiz-field"><label>Property Taxes</label><input id="wz-taxes" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Insurance</label><input id="wz-ins" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Management Fee</label><input id="wz-mgmt" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Maintenance / Repairs</label><input id="wz-maint" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Utilities</label><input id="wz-util" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Other Expenses</label><input id="wz-other-exp" type="number" placeholder="0" oninput="wizCalcNOI()"></div>',
+          '</div>',
+          '<div class="wiz-section">PRO FORMA (STABILIZED)</div>',
+          '<div class="wiz-grid">',
+            '<div class="wiz-field"><label>Pro Forma Annual Income</label><input id="wz-pf-income" type="number" placeholder="Leave blank to match current" oninput="wizCalcNOI()"></div>',
+            '<div class="wiz-field"><label>Pro Forma Total Expenses</label><input id="wz-pf-exp" type="number" placeholder="Leave blank to match current" oninput="wizCalcNOI()"></div>',
+          '</div>',
+        '</div>',
+
+        // Step 4 — Market + AI Copy
+        '<div class="wiz-step-content" id="wzstep-4">',
+          '<div class="wiz-section">MARKET LOCATION</div>',
+          '<div class="wiz-grid cols-3">',
+            '<div class="wiz-field"><label>City</label><input id="wz-city" placeholder="Sioux City"></div>',
+            '<div class="wiz-field"><label>State</label>',
+              '<select id="wz-state"><option value="">— Select —</option></select>',
+            '</div>',
+            '<div class="wiz-field" style="align-self:flex-end">',
+              '<button class="wiz-ai-btn" onclick="wizFetchMarket()" style="width:100%;justify-content:center">🌐 Fetch Census Data</button>',
+            '</div>',
+          '</div>',
+          '<div class="wiz-market-status" id="wz-mkt-status"></div>',
+          '<div class="wiz-section" style="margin-top:4px">MARKETING COPY</div>',
+          '<div style="display:flex;gap:10px;margin-bottom:12px">',
+            '<button class="wiz-ai-btn" id="wz-ai-btn" onclick="wizAIDraft()">✦ AI Draft All Copy</button>',
+            '<span style="font-size:11px;color:#8A8A88;align-self:center">Generates exec summary, callout, and 4 highlights from your data</span>',
+          '</div>',
+          '<div class="wiz-grid cols-1">',
+            '<div class="wiz-field"><label>Executive Summary</label><textarea id="wz-exec" placeholder="Brief investment thesis — AI will draft this for you"></textarea></div>',
+            '<div class="wiz-field"><label>Callout / Investment Thesis <span>one punchy sentence</span></label><input id="wz-callout" placeholder="e.g. Fully occupied workforce housing in a supply-constrained market"></div>',
+          '</div>',
+          '<div class="wiz-grid">',
+            '<div class="wiz-field"><label>Highlight 1</label><input id="wz-hl1" placeholder="Title - Description"></div>',
+            '<div class="wiz-field"><label>Highlight 2</label><input id="wz-hl2" placeholder="Title - Description"></div>',
+            '<div class="wiz-field"><label>Highlight 3</label><input id="wz-hl3" placeholder="Title - Description"></div>',
+            '<div class="wiz-field"><label>Highlight 4</label><input id="wz-hl4" placeholder="Title - Description"></div>',
+          '</div>',
+        '</div>',
+
+        // Step 5 — Media & Generate
+        '<div class="wiz-step-content" id="wzstep-5">',
+          '<div class="wiz-section">PROPERTY PHOTOS <span style="font-weight:400;font-size:10px;color:#8A8A88;letter-spacing:0">— first photo = cover</span></div>',
+          '<div class="wiz-photo-drop" id="wz-photo-drop" onclick="document.getElementById(\'wz-photo-input\').click()">',
+            '📸 &nbsp;Click or drag photos here &nbsp;·&nbsp; up to 10 images',
+          '</div>',
+          '<input type="file" id="wz-photo-input" accept="image/*" multiple style="display:none" onchange="wizHandlePhotos(this)">',
+          '<div class="wiz-photo-thumbs" id="wz-photo-thumbs"></div>',
+          '<div class="wiz-section">LISTING AGENTS</div>',
+          '<div id="wz-agents-wrap" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>',
+          '<div class="wiz-section">DISCLAIMER <span style="font-weight:400">(optional)</span></div>',
+          '<div class="wiz-grid cols-1">',
+            '<div class="wiz-field"><textarea id="wz-disclaimer" rows="2" placeholder="The information contained herein has been obtained from sources believed reliable..."></textarea></div>',
+          '</div>',
+        '</div>',
+
+      '</div>', // end wiz-body
+
+      // Footer
+      '<div class="wiz-footer">',
+        '<button class="wiz-back-btn" id="wz-back" onclick="wizNav(-1)" disabled>← Back</button>',
+        '<span class="wiz-progress-text" id="wz-progress">Step 1 of 5</span>',
+        '<button class="wiz-next-btn" id="wz-next" onclick="wizNav(1)">Next →</button>',
+      '</div>',
+
+      '</div>' // end modal
+    ].join('');
+
+    document.body.appendChild(el);
+
+    // Close on overlay click
+    el.addEventListener('click', function() { window.closeOMWizard(); });
+
+    // Populate state dropdown
+    if (typeof STATE_NAMES !== 'undefined') {
+      var sel = document.getElementById('wz-state');
+      Object.keys(STATE_NAMES).sort(function(a,b){ return STATE_NAMES[a].localeCompare(STATE_NAMES[b]); }).forEach(function(fips) {
+        var o = document.createElement('option');
+        o.value = fips; o.textContent = STATE_NAMES[fips];
+        sel.appendChild(o);
+      });
+    }
+
+    // Add two default unit rows
+    wizAddUnitRow(); wizAddUnitRow();
+
+    // Populate agent selection from saved agents
+    wizRenderAgentPicker();
+
+    // Drag-drop for photos
+    var drop = document.getElementById('wz-photo-drop');
+    if (drop) {
+      drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.style.borderColor='#1E2F39'; });
+      drop.addEventListener('dragleave', function(){ drop.style.borderColor='#C8A84B'; });
+      drop.addEventListener('drop', function(e){
+        e.preventDefault(); drop.style.borderColor='#C8A84B';
+        wizHandlePhotos({files: e.dataTransfer.files});
+      });
+    }
+  }
+
+  var _wizStep = 1;
+  var _wizPhotos = [];
+  var _wizUnitRows = 0;
+
+  window.openOMWizard = function() {
+    var ov = document.getElementById('om-wizard-overlay');
+    if (ov) ov.classList.add('open');
+    _wizStep = 1; _wizPhotos = []; _wizUnitRows = 0;
+    wizGoTo(1);
+    // Sync gross rent from unit data
+    var gr = unitData.reduce(function(s,u){ return s + u.units * u.rent * 12; }, 0);
+    var grEl = document.getElementById('wz-gross-rent');
+    if (grEl && gr > 0) { grEl.value = gr; wizCalcNOI(); }
+  };
+
+  window.closeOMWizard = function() {
+    var ov = document.getElementById('om-wizard-overlay');
+    if (ov) ov.classList.remove('open');
+  };
+
+  window.wizNav = function(dir) {
+    var next = _wizStep + dir;
+    if (next < 1 || next > 5) return;
+    if (dir > 0 && !wizValidate(_wizStep)) return;
+    wizGoTo(next);
+  };
+
+  function wizGoTo(step) {
+    _wizStep = step;
+    for (var i = 1; i <= 5; i++) {
+      var c = document.getElementById('wzstep-' + i);
+      if (c) c.classList.toggle('active', i === step);
+      var p = document.getElementById('wzpill-' + i);
+      if (p) {
+        p.classList.toggle('active', i === step);
+        p.classList.toggle('done', i < step);
+      }
+    }
+    var backBtn = document.getElementById('wz-back');
+    var nextBtn = document.getElementById('wz-next');
+    var prog    = document.getElementById('wz-progress');
+    if (backBtn) backBtn.disabled = (step === 1);
+    if (prog) prog.textContent = 'Step ' + step + ' of 5';
+    if (nextBtn) {
+      if (step === 5) {
+        nextBtn.outerHTML = '<button class="wiz-generate-btn" id="wz-next" onclick="wizFinish()">⚡ Generate OM</button>';
+      } else {
+        var existing = document.getElementById('wz-next');
+        if (existing && existing.classList.contains('wiz-generate-btn')) {
+          existing.outerHTML = '<button class="wiz-next-btn" id="wz-next" onclick="wizNav(1)">Next →</button>';
+        }
+      }
+    }
+    if (step === 3) wizCalcNOI();
+  }
+
+  function wizValidate(step) {
+    if (step === 1) {
+      var n1 = (document.getElementById('wz-name1') || {}).value || '';
+      var addr = (document.getElementById('wz-address') || {}).value || '';
+      if (!n1.trim()) { alert('Please enter a property name.'); return false; }
+      if (!addr.trim()) { alert('Please enter the property address.'); return false; }
+    }
+    if (step === 2) {
+      var price = +(document.getElementById('wz-price') || {}).value || 0;
+      if (!price) { alert('Please enter the asking price.'); return false; }
+    }
+    return true;
+  }
+
+  window.wizAddUnitRow = function() {
+    _wizUnitRows++;
+    var tbody = document.getElementById('wz-unit-body');
+    if (!tbody) return;
+    var tr = document.createElement('tr');
+    tr.id = 'wz-urow-' + _wizUnitRows;
+    var rowId = _wizUnitRows;
+    tr.innerHTML =
+      '<td><input placeholder="1BD/1BA" id="wzut-type-' + rowId + '" oninput="wizCalcNOI()"></td>' +
+      '<td><input type="number" placeholder="4" id="wzut-units-' + rowId + '" oninput="wizCalcNOI()"></td>' +
+      '<td><input type="number" placeholder="750" id="wzut-rent-' + rowId + '" oninput="wizCalcNOI()"></td>' +
+      '<td><input type="number" placeholder="650" id="wzut-sqft-' + rowId + '"></td>' +
+      '<td><button onclick="document.getElementById(\'wz-urow-' + rowId + '\').remove();wizCalcNOI()" ' +
+          'style="background:none;border:none;color:#A2B6C0;cursor:pointer;font-size:16px;padding:2px 6px">×</button></td>';
+    tbody.appendChild(tr);
+  };
+
+  window.wizCalcNOI = function() {
+    // Aggregate unit mix
+    var totalUnits = 0, totalMonthlyRent = 0;
+    for (var i = 1; i <= _wizUnitRows; i++) {
+      var uEl = document.getElementById('wzut-units-' + i);
+      var rEl = document.getElementById('wzut-rent-' + i);
+      if (!uEl || !rEl) continue;
+      var u = +uEl.value || 0;
+      var r = +rEl.value || 0;
+      totalUnits += u;
+      totalMonthlyRent += u * r;
+    }
+    // Update step 2 previews
+    var fmtK = function(n){ return n >= 1000000 ? '$'+(n/1000000).toFixed(1)+'M' : n >= 1000 ? '$'+Math.round(n/1000)+'K' : '$'+n.toLocaleString(); };
+    var price = +(document.getElementById('wz-price') || {}).value || 0;
+    var manualUnits = +(document.getElementById('wz-units') || {}).value || 0;
+    var effUnits = manualUnits || totalUnits;
+    var ppu = effUnits > 0 ? Math.round(price / effUnits) : 0;
+    var griEl = document.getElementById('wz-preview-gri');
+    var uPrEl = document.getElementById('wz-preview-units');
+    var ppuEl = document.getElementById('wz-preview-ppu');
+    if (griEl) griEl.textContent = fmtK(totalMonthlyRent);
+    if (uPrEl) uPrEl.textContent = effUnits || totalUnits;
+    if (ppuEl) ppuEl.textContent = ppu ? fmtK(ppu) : '$0';
+
+    // Step 3: Sync gross-rent from unit mix if not manually overridden
+    var grEl = document.getElementById('wz-gross-rent');
+    if (grEl && totalMonthlyRent > 0 && !grEl._manualOverride) {
+      grEl.value = totalMonthlyRent * 12;
+    }
+
+    // NOI calculation
+    var annGross = +(document.getElementById('wz-gross-rent') || {}).value || (totalMonthlyRent * 12);
+    var otherInc = +(document.getElementById('wz-other-inc') || {}).value || 0;
+    var egi = annGross + otherInc;
+    var taxes  = +(document.getElementById('wz-taxes') || {}).value || 0;
+    var ins    = +(document.getElementById('wz-ins') || {}).value || 0;
+    var mgmt   = +(document.getElementById('wz-mgmt') || {}).value || 0;
+    var maint  = +(document.getElementById('wz-maint') || {}).value || 0;
+    var util   = +(document.getElementById('wz-util') || {}).value || 0;
+    var othExp = +(document.getElementById('wz-other-exp') || {}).value || 0;
+    var totalExp = taxes + ins + mgmt + maint + util + othExp;
+    var noi = egi - totalExp;
+    var capRate = price > 0 ? ((noi / price) * 100) : 0;
+
+    var egiEl = document.getElementById('wz-noi-egi');
+    var expEl = document.getElementById('wz-noi-exp');
+    var noiEl = document.getElementById('wz-noi-noi');
+    var capEl = document.getElementById('wz-noi-cap');
+    if (egiEl) egiEl.textContent = fmtK(egi);
+    if (expEl) expEl.textContent = fmtK(totalExp);
+    if (noiEl) noiEl.textContent = fmtK(noi);
+    if (capEl) capEl.textContent = capRate.toFixed(2) + '%';
+  };
+
+  window.wizHandlePhotos = function(input) {
+    var files = Array.from(input.files || []);
+    var thumbs = document.getElementById('wz-photo-thumbs');
+    files.forEach(function(file) {
+      if (_wizPhotos.length >= 10) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        _wizPhotos.push(e.target.result);
+        var img = document.createElement('img');
+        img.className = 'wiz-photo-thumb';
+        img.src = e.target.result;
+        if (thumbs) thumbs.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  function wizRenderAgentPicker() {
+    var wrap = document.getElementById('wz-agents-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    agents.forEach(function(a, idx) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #D8D4C8;border-radius:7px;padding:10px 14px';
+      row.innerHTML =
+        '<input type="checkbox" id="wz-agent-' + idx + '" checked style="width:16px;height:16px;accent-color:#C8A84B">' +
+        '<div><div style="font-weight:700;color:#1E2F39;font-size:13px">' + (a.name || 'Agent ' + (idx+1)) + '</div>' +
+        '<div style="font-size:11px;color:#8A8A88">' + (a.title || '') + (a.phone ? ' · ' + a.phone : '') + '</div></div>';
+      wrap.appendChild(row);
+    });
+    if (!agents.length) {
+      wrap.innerHTML = '<div style="font-size:12px;color:#8A8A88;padding:8px">No agents saved yet — add them in the Contact tab after generating.</div>';
+    }
+  }
+
+  window.wizFetchMarket = function() {
+    var city  = (document.getElementById('wz-city') || {}).value || '';
+    var state = (document.getElementById('wz-state') || {}).value || '';
+    var st = document.getElementById('wz-mkt-status');
+    if (!city || !state) {
+      if (st) { st.textContent = 'Enter a city and state first.'; st.className = 'wiz-market-status show err'; }
+      return;
+    }
+    // Push values to main form and run existing Census fetch
+    var cityEl  = document.getElementById('mktCity');
+    var stateEl = document.getElementById('mktState');
+    if (cityEl)  cityEl.value  = city;
+    if (stateEl) stateEl.value = state;
+    if (st) { st.textContent = 'Fetching Census data...'; st.className = 'wiz-market-status show ok'; }
+    if (typeof fetchCensusData === 'function') {
+      fetchCensusData(function() {
+        if (st) { st.textContent = '✓ Market data loaded — verify in the Market tab'; st.className = 'wiz-market-status show ok'; }
+      });
+    } else {
+      if (st) { st.textContent = '✓ City/state saved — Census will load on next step'; st.className = 'wiz-market-status show ok'; }
+    }
+  };
+
+  window.wizAIDraft = function() {
+    if (!window.GatewayAPI || !window.GatewayAPI.claudeAvailable()) {
+      alert('AI not configured. Add claudeApiKey to config.js or set up the proxy.');
+      return;
+    }
+    var btn = document.getElementById('wz-ai-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '✦ Drafting...'; }
+
+    var name1  = (document.getElementById('wz-name1') || {}).value || '';
+    var name2  = (document.getElementById('wz-name2') || {}).value || '';
+    var addr   = (document.getElementById('wz-address') || {}).value || '';
+    var type   = (document.getElementById('wz-type') || {}).value || 'Multifamily';
+    var price  = (document.getElementById('wz-price') || {}).value || '';
+    var units  = (document.getElementById('wz-units') || {}).value || '';
+    var occ    = (document.getElementById('wz-occ') || {}).value || '';
+    var city   = (document.getElementById('wz-city') || {}).value || '';
+    var noi    = (document.getElementById('wz-noi-noi') || {}).textContent || '';
+    var cap    = (document.getElementById('wz-noi-cap') || {}).textContent || '';
+
+    var systemPrompt = 'You are a commercial real estate copywriter specializing in investment property offering memorandums. Write concisely and compellingly. Use professional real estate language.';
+    var userPrompt = [
+      'Write marketing copy for a ' + type + ' offering memorandum:',
+      'Property: ' + [name1, name2].filter(Boolean).join(' '),
+      'Address: ' + addr,
+      'Asking Price: $' + (+price).toLocaleString(),
+      'Total Units: ' + units,
+      'Occupancy: ' + occ,
+      'City: ' + city,
+      'NOI: ' + noi,
+      'Cap Rate: ' + cap,
+      '',
+      'Return ONLY this JSON (no markdown, no explanation):',
+      '{',
+      '  "execSummary": "2-3 sentence executive summary of the investment opportunity",',
+      '  "callout": "One punchy sentence — the core investment thesis",',
+      '  "hl1": "Title - Short description of highlight 1",',
+      '  "hl2": "Title - Short description of highlight 2",',
+      '  "hl3": "Title - Short description of highlight 3",',
+      '  "hl4": "Title - Short description of highlight 4"',
+      '}'
+    ].join('\n');
+
+    window.GatewayAPI.claude(systemPrompt, userPrompt, {max_tokens: 600}).then(function(text) {
+      try {
+        var json = JSON.parse(text.replace(/^```json\s*/,'').replace(/```$/,'').trim());
+        var set = function(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; };
+        set('wz-exec',    json.execSummary);
+        set('wz-callout', json.callout);
+        set('wz-hl1', json.hl1);
+        set('wz-hl2', json.hl2);
+        set('wz-hl3', json.hl3);
+        set('wz-hl4', json.hl4);
+      } catch(e) {
+        // If not valid JSON, dump into exec summary
+        var el = document.getElementById('wz-exec');
+        if (el) el.value = text;
+      }
+    }).catch(function(err) {
+      alert('AI error: ' + err);
+    }).finally ? window.GatewayAPI.claude(systemPrompt, userPrompt).then(function(){}).catch(function(){}) : null;
+    // Re-enable button after a delay
+    setTimeout(function() {
+      var b = document.getElementById('wz-ai-btn');
+      if (b) { b.disabled = false; b.innerHTML = '✦ AI Draft All Copy'; }
+    }, 6000);
+  };
+
+  window.wizFinish = function() {
+    // ── 1. Populate all main form fields ──
+    var set = function(id, val) { var el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
+
+    set('propName1',  (document.getElementById('wz-name1') || {}).value || '');
+    set('propName2',  (document.getElementById('wz-name2') || {}).value || '');
+    set('address',    (document.getElementById('wz-address') || {}).value || '');
+    set('propType',   (document.getElementById('wz-type') || {}).value || '');
+    set('yearBuilt',  (document.getElementById('wz-yearbuilt') || {}).value || '');
+    set('totalUnits', (document.getElementById('wz-units') || {}).value || _wizUnitRows);
+    set('occupancy',  (document.getElementById('wz-occ') || {}).value || '');
+    set('parking',    (document.getElementById('wz-parking') || {}).value || '');
+    set('lotSize',    (document.getElementById('wz-lot') || {}).value || '');
+    set('features',   (document.getElementById('wz-feats') || {}).value || '');
+    set('askingPrice',(document.getElementById('wz-price') || {}).value || '');
+    set('downPayment',(document.getElementById('wz-down') || {}).value || '');
+    set('execDesc',   (document.getElementById('wz-exec') || {}).value || '');
+    set('callout',    (document.getElementById('wz-callout') || {}).value || '');
+    set('hl1',        (document.getElementById('wz-hl1') || {}).value || '');
+    set('hl2',        (document.getElementById('wz-hl2') || {}).value || '');
+    set('hl3',        (document.getElementById('wz-hl3') || {}).value || '');
+    set('hl4',        (document.getElementById('wz-hl4') || {}).value || '');
+    set('disclaimer', (document.getElementById('wz-disclaimer') || {}).value || '');
+    set('mktCity',    (document.getElementById('wz-city') || {}).value || '');
+    var stateEl = document.getElementById('wz-state');
+    if (stateEl) set('mktState', stateEl.value);
+
+    // ── 2. Populate unit mix ──
+    unitData = [];
+    for (var i = 1; i <= _wizUnitRows; i++) {
+      var t = (document.getElementById('wzut-type-' + i) || {}).value || '';
+      var u = +(document.getElementById('wzut-units-' + i) || {}).value || 0;
+      var r = +(document.getElementById('wzut-rent-' + i) || {}).value || 0;
+      var s = +(document.getElementById('wzut-sqft-' + i) || {}).value || 0;
+      if (u > 0 || t) unitData.push({type:t, units:u, rent:r, sqft:s});
+    }
+    if (typeof renderUnits === 'function') renderUnits();
+
+    // ── 3. Populate financials ──
+    var annGross = +(document.getElementById('wz-gross-rent') || {}).value || 0;
+    var otherInc = +(document.getElementById('wz-other-inc') || {}).value || 0;
+    set('curIncome', annGross + otherInc);
+
+    var pfInc = +(document.getElementById('wz-pf-income') || {}).value || 0;
+    set('pfIncome', pfInc || (annGross + otherInc));
+
+    curExpenses = [];
+    var addExp = function(name, id) {
+      var v = +(document.getElementById(id) || {}).value || 0;
+      if (v) curExpenses.push({name:name, amount:v});
+    };
+    addExp('Property Taxes', 'wz-taxes');
+    addExp('Insurance', 'wz-ins');
+    addExp('Management Fee', 'wz-mgmt');
+    addExp('Maintenance', 'wz-maint');
+    addExp('Utilities', 'wz-util');
+    addExp('Other Expenses', 'wz-other-exp');
+
+    var pfExpTotal = +(document.getElementById('wz-pf-exp') || {}).value || 0;
+    pfExpenses = pfExpTotal
+      ? [{name:'Total Operating Expenses', amount:pfExpTotal}]
+      : curExpenses.map(function(e){ return {name:e.name, amount:e.amount}; });
+
+    if (typeof renderExpenseRows === 'function') {
+      renderExpenseRows('cur');
+      renderExpenseRows('pf');
+    }
+
+    // ── 4. Populate photos ──
+    photos = _wizPhotos.slice();
+
+    // ── 5. Filter agents to selected ──
+    var selectedAgents = agents.filter(function(a, idx) {
+      var cb = document.getElementById('wz-agent-' + idx);
+      return cb ? cb.checked : true;
+    });
+    if (selectedAgents.length) agents = selectedAgents;
+
+    // ── 6. Recalculate metrics and close ──
+    if (typeof recalcMetrics === 'function') recalcMetrics();
+    window.closeOMWizard();
+
+    // ── 7. Generate ──
+    setTimeout(function() { generateOM(); }, 200);
+  };
 
   // ---- INJECT AGENT BIO PANEL (TAB 10) ----
   function injectAgentBioPanel() {
@@ -3433,6 +3981,7 @@ renderPastOMs();
 
   // ---- INIT ----
   function initOverlay() {
+    injectOMWizard();
     injectTabs();
     injectCompsPanel();
     injectAnalysisPanel();

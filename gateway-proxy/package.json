@@ -1,0 +1,9 @@
+{
+  "name": "gateway-api-proxy",
+  "version": "1.0.0",
+  "description": "Server-side API proxy for Gateway Agent Toolkit — stores Claude and Buffer keys centrally so no agent needs to manage their own keys.",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}
