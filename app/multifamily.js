@@ -434,7 +434,7 @@ function generateGatewaySignature() {
   var medIncome=v('medianIncome')||'',unemployment=v('unemployment')||'',avgRent=v('avgRent')||'';
   var drv1T=v('drv1Title')||'',drv1D=v('drv1Desc')||'',drv2T=v('drv2Title')||'',drv2D=v('drv2Desc')||'',drv3T=v('drv3Title')||'',drv3D=v('drv3Desc')||'';
   var gwData={};try{gwData=JSON.parse(localStorage.getItem('gateway_about_company')||'{}');}catch(e){}
-  var agentProfiles=[];Object.keys(localStorage).forEach(function(k){if(k.startsWith('gateway_agent_profile_')&&agentProfiles.length<4){try{agentProfiles.push(JSON.parse(localStorage.getItem(k)));}catch(e){}}});
+  var agentProfiles=[];var _agSeen={};Object.keys(localStorage).forEach(function(k){if(k.startsWith('gateway_agent_profile_')&&agentProfiles.length<4){try{var _ap=JSON.parse(localStorage.getItem(k));var _an=(_ap.name||'').trim();if(_an&&!_agSeen[_an]){_agSeen[_an]=1;agentProfiles.push(_ap);}}catch(e){}}});
   var ph=photos||[],coverPhoto=ph[0]||'',galleryPhotos=[ph[1],ph[2],ph[3],ph[4],ph[5]].filter(Boolean);
   var unitMixRows='',totalUnitsCalc=0,totalRentCalc=0;
   (unitData||[]).forEach(function(u){if(!u.type&&!u.units)return;var mo=(u.units||0)*(u.rent||0);totalUnitsCalc+=(u.units||0);totalRentCalc+=mo;unitMixRows+='<tr><td>'+(u.type||'')+'</td><td>'+(u.units||0)+'</td><td>'+(u.sqft||0)+' sf</td><td>'+fmt(u.rent)+'</td><td class="num">'+fmt(mo)+'</td></tr>';});
@@ -488,10 +488,10 @@ function generateGatewaySignature() {
   +'<div class="page">'+LP('Property<br>Overview',stat('Year Built',yearBuilt)+stat('Total Units',totalUnits||'')+stat('Property Type',propType)+stat('Buildings',buildings)+stat('Lot Size',lotSize)+stat('Parking',parking)+stat('Occupancy',occupancy),'Property Overview','03')+'<div class="rp"><div class="sec-label">Property Description</div><div style="font-family:\'Playfair Display\',serif;font-size:18px;color:#2B3A42;margin-bottom:12px;">'+address+'</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:10px;margin-bottom:18px;">'+(propDesc||'No property description provided.')+'</p>'+(features?'<div class="sec-label" style="margin-bottom:6px;">Features &amp; Amenities</div><p style="font-size:11.5px;line-height:1.8;color:#6B6458;">'+features+'</p>':'')+'</div></div>'
   +'<div class="page">'+LP('Unit Mix &amp;<br>Rent Roll','<div style="margin-top:auto;">'+pill('Total Units',totalUnits||totalUnitsCalc||'—')+pill('Monthly Rent',fmtK(totalRentCalc))+pill('Annual Rent',fmtK(annualRent))+'</div>','Unit Mix','04')+'<div class="rp"><div class="sec-label">Unit Mix Summary</div><div class="rule"></div><table style="margin-top:8px;"><thead><tr><th>Unit Type</th><th>Units</th><th>Avg SF</th><th>Market Rent</th><th class="num">Monthly Total</th></tr></thead><tbody>'+(unitMixRows||'<tr><td colspan="5" style="color:#A09A8E;font-style:italic;">No unit data entered.</td></tr>')+'</tbody><tfoot><tr class="tr-total"><td>Total</td><td>'+(totalUnits||totalUnitsCalc)+'</td><td>—</td><td>—</td><td class="num">'+fmt(totalRentCalc)+'/mo</td></tr></tfoot></table><div style="margin-top:auto;padding-top:14px;border-top:1px solid #C4BFB5;"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;"><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">Avg. Rent / Unit</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+(totalUnitsCalc>0?fmt(Math.round(totalRentCalc/totalUnitsCalc)):'—')+'</div></div><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">Monthly Income</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+fmt(totalRentCalc)+'</div></div><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">Annual Income</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+fmt(annualRent)+'</div></div></div></div></div></div>'
   +'<div class="page">'+LP('Financial<br>Summary','<div style="margin-top:auto;">'+pill('Gross Income (Cur)',fmtK(curIncome))+pill('Gross Income (PF)',fmtK(pfIncome))+pill('NOI',fmtK(noi))+pill('Cap Rate',(capRate||'—')+(capRate&&capRate.indexOf('%')===-1?'%':''))+'</div>','Financial Summary','05')+'<div class="rp"><div class="sec-label">Income &amp; Expense Statement</div><div class="rule"></div><table style="margin-top:8px;"><thead><tr><th>Line Item</th><th class="num">Current</th><th class="num">Pro Forma</th></tr></thead><tbody><tr class="tr-head"><td colspan="3">Income</td></tr><tr><td>Gross Scheduled Rent</td><td class="num">'+fmt(curIncome)+'</td><td class="num">'+fmt(pfIncome)+'</td></tr>'+(curOtherRows||'')+'<tr class="tr-total"><td>Effective Gross Income</td><td class="num">'+fmt(curIncome)+'</td><td class="num">'+fmt(pfIncome)+'</td></tr><tr class="tr-head"><td colspan="3">Expenses</td></tr>'+(curExpRows||'<tr><td colspan="3" style="color:#A09A8E;font-style:italic;">No expense data.</td></tr>')+'<tr class="tr-total"><td>Total Expenses</td><td class="num">'+fmt(curExpTotal)+'</td><td class="num">'+fmt(pfExpTotal)+'</td></tr><tr class="tr-total" style="background:rgba(43,58,66,0.1)!important;"><td>Net Operating Income</td><td class="num" style="color:#2B3A42;">'+fmt(noi)+'</td><td class="num" style="color:#2B3A42;">'+fmt(pfIncome-pfExpTotal)+'</td></tr></tbody></table><div style="margin-top:auto;padding-top:14px;border-top:1px solid #C4BFB5;"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;"><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">Cap Rate</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+(capRate?(capRate+(capRate.indexOf('%')===-1?'%':'')):'—')+'</div></div><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">GRM</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+(grm||'—')+'</div></div><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">Price / Unit</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+fmtK(pricePerUnit)+'</div></div><div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#6B6458;margin-bottom:5px;">Asking Price</div><div style="font-size:18px;font-weight:700;font-family:\'Playfair Display\',serif;color:#2B3A42;">'+fmtK(askingPrice)+'</div></div></div></div></div></div>'
-  +'<div class="page">'+LP('Market<br>Overview',(mktCity?'<div style="font-size:13px;color:#C8A84B;font-weight:600;margin-bottom:14px;">'+mktCity+'</div>':'')+stat('Population',population)+stat('Median HH Income',medIncome)+stat('Unemployment',unemployment)+stat('Avg Market Rent',avgRent),'Market Overview','06')+'<div class="rp"><div class="sec-label">Market Analysis</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:12px;margin-bottom:0;">'+(mktDesc||'No market description provided.')+'</p><div style="margin-top:auto;padding-top:16px;"><div class="sec-label" style="margin-bottom:10px;">Economic &amp; Market Drivers</div><div class="rule" style="margin-top:0;margin-bottom:12px;"></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'+'<div style="background:#2B3A42;border-radius:4px;padding:12px;"><div style="height:2px;background:#C8A84B;border-radius:1px;margin-bottom:8px;"></div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8A84B;margin-bottom:6px;">'+(drv1T||'Regional Hub')+'</div><p style="font-size:10px;line-height:1.65;color:#A09A8E;margin:0;">'+(drv1D||'&nbsp;')+'</p></div>'+'<div style="background:#2B3A42;border-radius:4px;padding:12px;"><div style="height:2px;background:#C8A84B;border-radius:1px;margin-bottom:8px;"></div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8A84B;margin-bottom:6px;">'+(drv2T||'Stable Economy')+'</div><p style="font-size:10px;line-height:1.65;color:#A09A8E;margin:0;">'+(drv2D||'&nbsp;')+'</p></div>'+'<div style="background:#2B3A42;border-radius:4px;padding:12px;"><div style="height:2px;background:#C8A84B;border-radius:1px;margin-bottom:8px;"></div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8A84B;margin-bottom:6px;">'+(drv3T||'Affordable Market')+'</div><p style="font-size:10px;line-height:1.65;color:#A09A8E;margin:0;">'+(drv3D||'&nbsp;')+'</p></div>'+'</div></div></div></div>'
+  +'<div class="page">'+LP('Market<br>Overview',(mktCity?'<div style="font-size:13px;color:#C8A84B;font-weight:600;margin-bottom:14px;">'+mktCity+'</div>':'')+stat('Population',population)+stat('Median HH Income',medIncome)+stat('Unemployment',unemployment)+stat('Avg Market Rent',avgRent),'Market Overview','06')+'<div class="rp"><div class="sec-label">Market Analysis</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:12px;margin-bottom:0;">'+(mktDesc||'No market description provided.')+'</p><div style="margin-top:24px;padding-top:16px;"><div class="sec-label" style="margin-bottom:10px;">Economic &amp; Market Drivers</div><div class="rule" style="margin-top:0;margin-bottom:12px;"></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'+'<div style="background:#2B3A42;border-radius:4px;padding:12px;"><div style="height:2px;background:#C8A84B;border-radius:1px;margin-bottom:8px;"></div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8A84B;margin-bottom:6px;">'+(drv1T||'Regional Hub')+'</div><p style="font-size:10px;line-height:1.65;color:#A09A8E;margin:0;">'+(drv1D||'&nbsp;')+'</p></div>'+'<div style="background:#2B3A42;border-radius:4px;padding:12px;"><div style="height:2px;background:#C8A84B;border-radius:1px;margin-bottom:8px;"></div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8A84B;margin-bottom:6px;">'+(drv2T||'Stable Economy')+'</div><p style="font-size:10px;line-height:1.65;color:#A09A8E;margin:0;">'+(drv2D||'&nbsp;')+'</p></div>'+'<div style="background:#2B3A42;border-radius:4px;padding:12px;"><div style="height:2px;background:#C8A84B;border-radius:1px;margin-bottom:8px;"></div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#C8A84B;margin-bottom:6px;">'+(drv3T||'Affordable Market')+'</div><p style="font-size:10px;line-height:1.65;color:#A09A8E;margin:0;">'+(drv3D||'&nbsp;')+'</p></div>'+'</div></div></div></div>'
   +'<div class="page"><div style="width:30%;height:100%;background:#2B3A42;padding:44px 34px;display:flex;flex-direction:column;flex-shrink:0;position:relative;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;margin-bottom:28px;">GATEWAY<br>REAL ESTATE ADVISORS</div><div style="font-family:\'Playfair Display\',serif;font-size:26px;color:#E8E0D0;line-height:1.2;">Property<br>Photos</div><div style="height:1px;background:rgba(196,191,181,0.25);margin:16px 0;"></div><div style="font-size:11px;color:#A09A8E;line-height:1.7;">'+address+'</div><div style="position:absolute;bottom:22px;right:34px;font-size:9px;color:#6B6458;">07</div></div><div class="rp" style="padding:24px 26px;">'+photoGallery+'</div></div>'
   +'<div class="page">'+LP('About the<br>Agents','<div style="margin-top:auto;font-size:10.5px;color:#A09A8E;line-height:1.7;">Contact the listing agent(s) for information on this offering.</div>','Listing Agents','08')+'<div class="rp" style="overflow:auto;">'+agentCardsHTML+'</div></div>'
-  +'<div class="page">'+LP('About<br>Gateway','<div style="margin-top:auto;">'+(gwData.stat1val?pill(gwData.stat1lbl||'Transactions',gwData.stat1val):'')+(gwData.stat2val?pill(gwData.stat2lbl||'Volume',gwData.stat2val):'')+(gwData.stat3val?pill(gwData.stat3lbl||'Years',gwData.stat3val):'')+'</div>','About Gateway','09')+'<div class="rp"><div class="sec-label">Who We Are</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:12px;">'+(gwData.para1||'Gateway Real Estate Advisors is a premier commercial real estate brokerage specializing in multifamily investment properties.')+'</p>'+(gwData.para2?'<p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:14px;">'+gwData.para2+'</p>':'')+(svcTags?'<div class="sec-label" style="margin-top:20px;margin-bottom:10px;">Our Services</div><div style="display:flex;flex-wrap:wrap;gap:8px;">'+svcTags+'</div>':'')+'</div></div>'
+  +'<div class="page">'+LP('About<br>Gateway','<div style="margin-top:auto;">'+(gwData.stat1v?pill(gwData.stat1l||'Transactions',gwData.stat1v):'')+(gwData.stat2v?pill(gwData.stat2l||'Volume',gwData.stat2v):'')+(gwData.stat3v?pill(gwData.stat3l||'Years',gwData.stat3v):'')+'</div>','About Gateway','09')+'<div class="rp"><div class="sec-label">Who We Are</div><div class="rule"></div><p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:12px;">'+(gwData.para1||'Gateway Real Estate Advisors is a premier commercial real estate brokerage specializing in multifamily investment properties.')+'</p>'+(gwData.para2?'<p style="font-size:12px;line-height:1.8;color:#2C2C2C;margin-top:14px;">'+gwData.para2+'</p>':'')+(svcTags?'<div class="sec-label" style="margin-top:20px;margin-bottom:10px;">Our Services</div><div style="display:flex;flex-wrap:wrap;gap:8px;">'+svcTags+'</div>':'')+'<div style="height:1px;background:rgba(200,168,75,0.45);margin:16px 0 12px;"></div><div class="sec-label" style="margin-bottom:10px;">Why Gateway</div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:#C8A84B;flex-shrink:0;font-size:10px;margin-top:3px;">&#9632;</span><span style="font-size:11px;color:#2C2C2C;line-height:1.7;">Specialized multifamily expertise across Midwest markets</span></div><div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:#C8A84B;flex-shrink:0;font-size:10px;margin-top:3px;">&#9632;</span><span style="font-size:11px;color:#2C2C2C;line-height:1.7;">Proven marketing reach driving competitive offer environments</span></div><div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:#C8A84B;flex-shrink:0;font-size:10px;margin-top:3px;">&#9632;</span><span style="font-size:11px;color:#2C2C2C;line-height:1.7;">Full-service advisory from valuation through closing</span></div></div></div></div>'
   +'<div class="page"><div style="width:38%;height:100%;background:#2B3A42;padding:44px 34px;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;position:relative;"><div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#C8A84B;">GATEWAY<br>REAL ESTATE ADVISORS</div><div><div style="font-family:\'Playfair Display\',serif;font-size:30px;color:#E8E0D0;line-height:1.15;margin-bottom:20px;">Confidential<br>Offering</div><div style="height:1px;background:rgba(196,191,181,0.25);margin-bottom:16px;"></div><div style="font-size:11px;color:#A09A8E;line-height:1.7;">'+address+'</div></div><div style="font-size:9px;color:#6B6458;">'+prepared+'</div><div style="position:absolute;bottom:22px;right:34px;font-size:9px;color:#6B6458;">10</div></div><div class="rp" style="justify-content:center;"><div class="sec-label" style="margin-bottom:14px;">Confidentiality &amp; Disclaimer</div><div class="rule"></div><p style="font-size:10.5px;line-height:1.9;color:#6B6458;margin-top:14px;">This Offering Memorandum has been prepared by Gateway Real Estate Advisors for use by a limited number of qualified parties. The information contained herein has been obtained from sources believed reliable; however, Gateway Real Estate Advisors makes no representation, warranty, or guarantee as to the accuracy or completeness of any information contained herein.</p><p style="font-size:10.5px;line-height:1.9;color:#6B6458;margin-top:12px;">Prospective purchasers shall be responsible for their costs and expenses of investigating the subject property. This Offering Memorandum is subject to prior placement, errors, omissions, and withdrawal without notice.</p><p style="font-size:10.5px;line-height:1.9;color:#6B6458;margin-top:12px;">This is not an offer to sell securities. Pro forma projections are not guaranteed.</p><div style="margin-top:28px;padding-top:14px;border-top:1px solid #C4BFB5;font-size:10px;color:#A09A8E;">&copy; '+yr+' Gateway Real Estate Advisors &middot; All Rights Reserved</div></div></div>'
   +'</body></html>';
   var win=window.open('','_blank');
@@ -518,7 +518,7 @@ function generateGatewayCanvas() {
   var medIncome=v('medianIncome')||'',unemployment=v('unemployment')||'',avgRent=v('avgRent')||'';
   var drv1T=v('drv1Title')||'',drv1D=v('drv1Desc')||'',drv2T=v('drv2Title')||'',drv2D=v('drv2Desc')||'',drv3T=v('drv3Title')||'',drv3D=v('drv3Desc')||'';
   var gwData={};try{gwData=JSON.parse(localStorage.getItem('gateway_about_company')||'{}');}catch(e){}
-  var agentProfiles=[];Object.keys(localStorage).forEach(function(k){if(k.startsWith('gateway_agent_profile_')&&agentProfiles.length<4){try{agentProfiles.push(JSON.parse(localStorage.getItem(k)));}catch(e){}}});
+  var agentProfiles=[];var _agSeen={};Object.keys(localStorage).forEach(function(k){if(k.startsWith('gateway_agent_profile_')&&agentProfiles.length<4){try{var _ap=JSON.parse(localStorage.getItem(k));var _an=(_ap.name||'').trim();if(_an&&!_agSeen[_an]){_agSeen[_an]=1;agentProfiles.push(_ap);}}catch(e){}}});
   var ph=photos||[],coverPhoto=ph[0]||'',galleryPhotos=[ph[1],ph[2],ph[3],ph[4],ph[5]].filter(Boolean);
   var unitMixRows='',totalUnitsCalc=0,totalRentCalc=0;
   (unitData||[]).forEach(function(u){if(!u.type&&!u.units)return;var mo=(u.units||0)*(u.rent||0);totalUnitsCalc+=(u.units||0);totalRentCalc+=mo;unitMixRows+='<tr><td>'+u.type+'</td><td class="tc">'+u.units+'</td><td class="tc">'+u.sqft+' SF</td><td class="tr">'+fmt(u.rent)+'</td><td class="tr">'+fmt(mo)+'</td></tr>';});
@@ -819,9 +819,9 @@ function generateGatewayCanvas() {
 
   // ── About Gateway ──
   var gwStatStrip='<div class="gw-stat-strip">'
-    +(gwData.stat1val?'<div class="gw-stat"><div class="gw-stat-v">'+gwData.stat1val+'</div><div class="gw-stat-l">'+(gwData.stat1lbl||'Transactions')+'</div></div>':'')
-    +(gwData.stat2val?'<div class="gw-stat"><div class="gw-stat-v">'+gwData.stat2val+'</div><div class="gw-stat-l">'+(gwData.stat2lbl||'Volume')+'</div></div>':'')
-    +(gwData.stat3val?'<div class="gw-stat"><div class="gw-stat-v">'+gwData.stat3val+'</div><div class="gw-stat-l">'+(gwData.stat3lbl||'Years')+'</div></div>':'')
+    +(gwData.stat1v?'<div class="gw-stat"><div class="gw-stat-v">'+gwData.stat1v+'</div><div class="gw-stat-l">'+(gwData.stat1l||'Transactions')+'</div></div>':'')
+    +(gwData.stat2v?'<div class="gw-stat"><div class="gw-stat-v">'+gwData.stat2v+'</div><div class="gw-stat-l">'+(gwData.stat2l||'Volume')+'</div></div>':'')
+    +(gwData.stat3v?'<div class="gw-stat"><div class="gw-stat-v">'+gwData.stat3v+'</div><div class="gw-stat-l">'+(gwData.stat3l||'Years')+'</div></div>':'')
   +'</div>';
   var svcList=[gwData.svc1,gwData.svc2,gwData.svc3,gwData.svc4,gwData.svc5].filter(Boolean).map(bullet).join('');
   var gwPage=page('09',
@@ -1476,78 +1476,16 @@ function generateOM() {
     addFooter(s7, '07', true);
 
     // ════════════════════════════════════════════════
-    // SLIDE 8: CONTACT
+    // SLIDE 8: ABOUT THE AGENTS
     // ════════════════════════════════════════════════
-    var s8 = pptx.addSlide();
-    s8.background = {color:NV};
-
-    s8.addShape('rect', {x:0, y:0, w:10, h:0.06, fill:{color:GOLD}});
-    addGoldLine(s8, 0, 5.35, 10);
-
-    // Logo
-    if (typeof LOGO_ROUND_SUBMARK !== 'undefined' && LOGO_ROUND_SUBMARK) {
-      s8.addImage({data:LOGO_ROUND_SUBMARK, x:3.9, y:0.22, w:2.2, h:2.2, sizing:{type:'contain', w:2.2, h:2.2}});
-    } else if (typeof LOGO_PRIMARY_LIGHT !== 'undefined' && LOGO_PRIMARY_LIGHT) {
-      s8.addImage({data:LOGO_PRIMARY_LIGHT, x:2.5, y:0.4, w:5.0, h:1.6, sizing:{type:'contain', w:5.0, h:1.6}});
-    }
-
-    addGoldLine(s8, 1.5, 2.55, 7.0);
-    s8.addText('EXCLUSIVELY OFFERED BY', {x:0, y:2.65, w:10, h:0.28, align:'center', fontSize:9, fontFace:'Arial', color:GOLD, charSpacing:2.5, bold:true});
-    addGoldLine(s8, 1.5, 2.93, 7.0);
-
-    // Agent cards
     var visAgents   = agents.filter(function(a){ return (a.name || '').trim(); });
-    var numAgents   = visAgents.length || 1;
-    var agentCardW  = Math.min(2.65, (8.4 / numAgents) - 0.35);
-    var agentGap    = 0.38;
-    var totalAgentW = numAgents * agentCardW + (numAgents - 1) * agentGap;
-    var agentStartX = (10 - totalAgentW) / 2;
-
-    visAgents.forEach(function(a, idx) {
-      var ax = agentStartX + idx * (agentCardW + agentGap);
-      var ay = 3.06;
-      var ach = 2.0;
-
-      s8.addShape('rect', {x:ax, y:ay, w:agentCardW, h:ach, fill:{color:NV2}});
-      s8.addShape('rect', {x:ax, y:ay, w:agentCardW, h:0.045, fill:{color:GOLD}});
-
-      s8.addText((a.name || '').toUpperCase(), {x:ax, y:ay+0.08, w:agentCardW, h:0.28, align:'center', fontSize:13, fontFace:'Georgia', color:WH, bold:true});
-      if (a.title) {
-        s8.addText(a.title, {x:ax+0.1, y:ay+0.37, w:agentCardW-0.2, h:0.18, align:'center', fontSize:8, fontFace:'Arial', color:GOLD});
-      }
-      s8.addShape('rect', {x:ax+0.28, y:ay+0.58, w:agentCardW-0.56, h:0.003, fill:{color:AC}});
-      if (a.company) {
-        s8.addText(a.company, {x:ax+0.1, y:ay+0.64, w:agentCardW-0.2, h:0.18, align:'center', fontSize:7.5, fontFace:'Arial', color:AC});
-      }
-      if (a.phone) {
-        s8.addText(a.phone, {x:ax+0.1, y:ay+0.86, w:agentCardW-0.2, h:0.18, align:'center', fontSize:8, fontFace:'Arial', color:WH});
-      }
-      if (a.email) {
-        s8.addText(a.email, {x:ax+0.1, y:ay+1.06, w:agentCardW-0.2, h:0.18, align:'center', fontSize:7.5, fontFace:'Arial', color:AC});
-      }
-      if (a.licenses) {
-        s8.addText(a.licenses, {x:ax+0.1, y:ay+1.28, w:agentCardW-0.2, h:0.18, align:'center', fontSize:6.5, fontFace:'Arial', color:GR, italic:true});
-      }
-    });
-
-    // Disclaimer
-    var disc = document.getElementById('disclaimer') ? document.getElementById('disclaimer').value : '';
-    if (disc) {
-      s8.addText(disc, {x:0.6, y:5.06, w:8.8, h:0.26, fontSize:6.5, fontFace:'Arial', color:'3A5060', align:'center'});
-    }
-
-    addFooter(s8, '08', true);
-
-    // ════════════════════════════════════════════════
-    // SLIDE 9: ABOUT THE AGENTS
-    // ════════════════════════════════════════════════
     var s9 = pptx.addSlide();
     s9.background = {color:PL};
 
     // Left accent panel
     s9.addShape('rect', {x:0, y:0, w:3.2, h:5.625, fill:{color:NV}});
     s9.addShape('rect', {x:0, y:0, w:3.2, h:0.06, fill:{color:GOLD}});
-    s9.addText('09', {x:0, y:0.14, w:3.2, h:0.52, align:'center', fontSize:38, fontFace:'Georgia', color:GOLD, bold:true});
+    s9.addText('08', {x:0, y:0.14, w:3.2, h:0.52, align:'center', fontSize:38, fontFace:'Georgia', color:GOLD, bold:true});
     addGoldLine(s9, 0.3, 0.69, 2.6);
     s9.addText('ABOUT THE\nAGENTS', {x:0.15, y:0.76, w:2.9, h:0.9, align:'center', fontSize:13, fontFace:'Georgia', color:WH, bold:true, lineSpacingMultiple:1.15});
 
@@ -1619,10 +1557,10 @@ function generateOM() {
     s9.addShape('rect', {x:r9x, y:4.96, w:r9w, h:0.36, fill:{color:CR}});
     s9.addText('All information deemed reliable but not guaranteed. For additional information contact the listing agents.', {x:r9x+0.1, y:4.96, w:r9w-0.2, h:0.36, fontSize:6.5, fontFace:'Arial', color:NV, align:'center', valign:'middle', italic:true});
 
-    addFooter(s9, '09', false);
+    addFooter(s9, '08', false);
 
     // ════════════════════════════════════════════════
-    // SLIDE 10: ABOUT GATEWAY REAL ESTATE ADVISORS
+    // SLIDE 9: ABOUT GATEWAY REAL ESTATE ADVISORS
     // ════════════════════════════════════════════════
     var s10 = pptx.addSlide();
     s10.background = {color:NV};
@@ -1634,16 +1572,16 @@ function generateOM() {
     addGoldLine(s10, 4.2, 0, 5.8);
 
     // Left side — company identity
-    s10.addText('10', {x:0.3, y:0.2, w:3.5, h:0.55, fontSize:38, fontFace:'Georgia', color:GOLD, bold:true, align:'left'});
+    s10.addText('09', {x:0.3, y:0.2, w:3.5, h:0.55, fontSize:38, fontFace:'Georgia', color:GOLD, bold:true, align:'left'});
     addGoldLine(s10, 0.3, 0.78, 3.6);
     s10.addText('ABOUT\nGATEWAY', {x:0.3, y:0.88, w:3.6, h:0.88, fontSize:22, fontFace:'Georgia', color:WH, bold:true, lineSpacingMultiple:1.15, align:'left'});
     s10.addText('REAL ESTATE ADVISORS', {x:0.3, y:1.76, w:3.6, h:0.24, fontSize:8, fontFace:'Arial', color:GOLD, charSpacing:1.5, align:'left'});
 
     // Company stat boxes
     var gwStats = [
-      {l: gwAbout.stat1lbl || 'Transactions', v: gwAbout.stat1val || '—'},
-      {l: gwAbout.stat2lbl || 'Volume Closed', v: gwAbout.stat2val || '—'},
-      {l: gwAbout.stat3lbl || 'Years in Market', v: gwAbout.stat3val || '—'}
+      {l: gwAbout.stat1l || 'Transactions', v: gwAbout.stat1v || '—'},
+      {l: gwAbout.stat2l || 'Volume Closed', v: gwAbout.stat2v || '—'},
+      {l: gwAbout.stat3l || 'Years in Market', v: gwAbout.stat3v || '—'}
     ];
     gwStats.forEach(function(gs, gi) {
       addGoldMetricBox(s10, 0.3 + gi * 1.25, 2.18, 1.15, 0.85, gs.v, gs.l);
@@ -1688,7 +1626,69 @@ function generateOM() {
     s10.addShape('rect', {x:r10x, y:4.92, w:r10w, h:0.04, fill:{color:GOLD}});
     s10.addText('Exclusively Offered by Gateway Real Estate Advisors  ·  gateway.com  ·  Sioux City, Iowa', {x:r10x+0.1, y:4.93, w:r10w-0.2, h:0.44, fontSize:8, fontFace:'Arial', color:AC, align:'center', valign:'middle'});
 
-    addFooter(s10, '10', true);
+    addFooter(s10, '09', true);
+    // ════════════════════════════════════════════════
+    // SLIDE 10: CONTACT
+    // ════════════════════════════════════════════════
+    var s8 = pptx.addSlide();
+    s8.background = {color:NV};
+
+    s8.addShape('rect', {x:0, y:0, w:10, h:0.06, fill:{color:GOLD}});
+    addGoldLine(s8, 0, 5.35, 10);
+
+    // Logo
+    if (typeof LOGO_ROUND_SUBMARK !== 'undefined' && LOGO_ROUND_SUBMARK) {
+      s8.addImage({data:LOGO_ROUND_SUBMARK, x:3.9, y:0.22, w:2.2, h:2.2, sizing:{type:'contain', w:2.2, h:2.2}});
+    } else if (typeof LOGO_PRIMARY_LIGHT !== 'undefined' && LOGO_PRIMARY_LIGHT) {
+      s8.addImage({data:LOGO_PRIMARY_LIGHT, x:2.5, y:0.4, w:5.0, h:1.6, sizing:{type:'contain', w:5.0, h:1.6}});
+    }
+
+    addGoldLine(s8, 1.5, 2.55, 7.0);
+    s8.addText('EXCLUSIVELY OFFERED BY', {x:0, y:2.65, w:10, h:0.28, align:'center', fontSize:9, fontFace:'Arial', color:GOLD, charSpacing:2.5, bold:true});
+    addGoldLine(s8, 1.5, 2.93, 7.0);
+
+    // Agent cards
+    var numAgents   = visAgents.length || 1;
+    var agentCardW  = Math.min(2.65, (8.4 / numAgents) - 0.35);
+    var agentGap    = 0.38;
+    var totalAgentW = numAgents * agentCardW + (numAgents - 1) * agentGap;
+    var agentStartX = (10 - totalAgentW) / 2;
+
+    visAgents.forEach(function(a, idx) {
+      var ax = agentStartX + idx * (agentCardW + agentGap);
+      var ay = 3.06;
+      var ach = 2.0;
+
+      s8.addShape('rect', {x:ax, y:ay, w:agentCardW, h:ach, fill:{color:NV2}});
+      s8.addShape('rect', {x:ax, y:ay, w:agentCardW, h:0.045, fill:{color:GOLD}});
+
+      s8.addText((a.name || '').toUpperCase(), {x:ax, y:ay+0.08, w:agentCardW, h:0.28, align:'center', fontSize:13, fontFace:'Georgia', color:WH, bold:true});
+      if (a.title) {
+        s8.addText(a.title, {x:ax+0.1, y:ay+0.37, w:agentCardW-0.2, h:0.18, align:'center', fontSize:8, fontFace:'Arial', color:GOLD});
+      }
+      s8.addShape('rect', {x:ax+0.28, y:ay+0.58, w:agentCardW-0.56, h:0.003, fill:{color:AC}});
+      if (a.company) {
+        s8.addText(a.company, {x:ax+0.1, y:ay+0.64, w:agentCardW-0.2, h:0.18, align:'center', fontSize:7.5, fontFace:'Arial', color:AC});
+      }
+      if (a.phone) {
+        s8.addText(a.phone, {x:ax+0.1, y:ay+0.86, w:agentCardW-0.2, h:0.18, align:'center', fontSize:8, fontFace:'Arial', color:WH});
+      }
+      if (a.email) {
+        s8.addText(a.email, {x:ax+0.1, y:ay+1.06, w:agentCardW-0.2, h:0.18, align:'center', fontSize:7.5, fontFace:'Arial', color:AC});
+      }
+      if (a.licenses) {
+        s8.addText(a.licenses, {x:ax+0.1, y:ay+1.28, w:agentCardW-0.2, h:0.18, align:'center', fontSize:6.5, fontFace:'Arial', color:GR, italic:true});
+      }
+    });
+
+    // Disclaimer
+    var disc = document.getElementById('disclaimer') ? document.getElementById('disclaimer').value : '';
+    if (disc) {
+      s8.addText(disc, {x:0.6, y:5.06, w:8.8, h:0.26, fontSize:6.5, fontFace:'Arial', color:'3A5060', align:'center'});
+    }
+
+    addFooter(s8, '10', true);
+
 
     // ════════════════════════════════════════════════
     // GENERATE FILE
