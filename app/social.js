@@ -517,6 +517,8 @@ async function drawResidentialNewListing(canvas, ctx) {
 async function drawResidentialJustSold(canvas, ctx) {
   var W = canvas.width, H = canvas.height;
   var pal = PALETTES[smPalette] || PALETTES.navy;
+  var isSquare = H <= 1080;
+
   var grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, pal.bg1);
   grad.addColorStop(1, pal.bg2);
@@ -524,15 +526,28 @@ async function drawResidentialJustSold(canvas, ctx) {
   ctx.fillRect(0, 0, W, H);
 
   var address = document.getElementById('sm-address').value || '1234 Maple Street';
-  var beds = document.getElementById('sm-res-beds').value || '';
-  var baths = document.getElementById('sm-res-baths').value || '';
-  var sqft = document.getElementById('sm-res-sqft').value || '';
-  var lot = document.getElementById('sm-res-lot').value || '';
-  var garage = document.getElementById('sm-res-garage').value || '';
-  var year = document.getElementById('sm-res-year').value || '';
+  var beds    = document.getElementById('sm-res-beds').value || '';
+  var baths   = document.getElementById('sm-res-baths').value || '';
+  var sqft    = document.getElementById('sm-res-sqft').value || '';
+  var lot     = document.getElementById('sm-res-lot').value || '';
+  var garage  = document.getElementById('sm-res-garage').value || '';
+  var year    = document.getElementById('sm-res-year').value || '';
 
-  // Property photo at top with white border
-  var photoY = 50, photoH = 600;
+  // Responsive sizing
+  var agPhotoW  = isSquare ? 120 : 150;
+  var agPhotoH  = isSquare ? 152 : 190;
+  var agSpacing = isSquare ? 430 : 460;
+  var logoSz    = isSquare ? 110 : 155;
+  // Reserve bottom zone height for logo + JUST SOLD + subtitle + website
+  var bottomZone = isSquare ? 195 : 240;
+
+  // ── Property photo — responsive height ─────────────────────────────────
+  var photoY = isSquare ? 40 : 50;
+  // Leave room: infoSection (~90px) + sep (~30px) + agent (agPhotoH+30) + bottom zone
+  var infoReserve = 90 + 30 + agPhotoH + 36 + bottomZone;
+  var photoH = Math.max(isSquare ? 340 : 480, H - photoY - infoReserve);
+  photoH = Math.min(photoH, isSquare ? 430 : 600);
+
   var photoSrc = smPhotos[0];
   if (photoSrc) {
     try {
@@ -551,107 +566,109 @@ async function drawResidentialJustSold(canvas, ctx) {
       ctx.restore();
     } catch(e) {}
   } else {
+    var m2 = 60, b2 = 10;
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(50, photoY - 10, W - 100, photoH + 20);
-    ctx.fillStyle = '#2a3e48';
-    ctx.fillRect(60, photoY, W - 120, photoH);
-    ctx.fillStyle = '#5a6a72';
-    ctx.textAlign = 'center';
-    ctx.font = '28px Montserrat';
+    ctx.fillRect(m2 - b2, photoY - b2, W - (m2-b2)*2, photoH + b2*2);
+    ctx.fillStyle = '#2a3e48'; ctx.fillRect(m2, photoY, W - m2*2, photoH);
+    ctx.fillStyle = '#5a6a72'; ctx.textAlign = 'center'; ctx.font = '28px Montserrat';
     ctx.fillText('Property Photo', W/2, photoY + photoH/2);
   }
 
-  // Address below photo
-  var infoY = photoY + photoH + 46;
+  // ── Address + details ───────────────────────────────────────────────────
+  var infoY = photoY + photoH + (isSquare ? 28 : 46);
   ctx.textAlign = 'left';
-  ctx.font = '600 26px "Montserrat", sans-serif';
+  ctx.font = '600 ' + (isSquare ? 22 : 26) + 'px "Montserrat", sans-serif';
   ctx.fillStyle = pal.accent;
   ctx.fillText(address, 60, infoY);
 
-  // Details icon row
   var details = [];
-  if (beds) details.push('🛏 ' + beds);
-  if (baths) details.push('🚿 ' + baths);
-  if (sqft) details.push('📐 ' + sqft);
+  if (beds)   details.push('🛏 ' + beds);
+  if (baths)  details.push('🚿 ' + baths);
+  if (sqft)   details.push('📏 ' + sqft);
   if (garage) details.push('🚗 ' + garage);
-  if (lot) details.push('📍 ' + lot);
-  if (year) details.push('🏗 ' + year);
+  if (lot)    details.push('📍 ' + lot);
+  if (year)   details.push('🏗 ' + year);
   if (details.length) {
-    ctx.font = '400 20px "Montserrat", sans-serif';
+    ctx.font = '400 ' + (isSquare ? 17 : 20) + 'px "Montserrat", sans-serif';
     ctx.fillStyle = pal.text;
-    ctx.fillText(details.join('  ·  '), 60, infoY + 36);
+    ctx.fillText(details.join('  ·  '), 60, infoY + (isSquare ? 28 : 36));
   }
 
-  // Separator
-  var sepY = infoY + 60;
-  ctx.strokeStyle = pal.accent + '44';
-  ctx.lineWidth = 1;
+  // ── Separator ────────────────────────────────────────────────────────────
+  var sepY = infoY + (isSquare ? 48 : 60);
+  ctx.strokeStyle = pal.accent + '44'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(60, sepY); ctx.lineTo(W - 60, sepY); ctx.stroke();
 
-  // Agent section
-  var agentY = sepY + 26;
+  // ── Agent section ────────────────────────────────────────────────────────
+  var agentStartY = sepY + (isSquare ? 18 : 26);
   var hasAgent = smAgents.length > 0 && smAgents[0].name;
   if (hasAgent) {
     for (var ai = 0; ai < Math.min(smAgents.length, 2); ai++) {
       var ag = smAgents[ai];
       if (!ag.name) continue;
-      var agX = 60 + ai * 460;
+      var agX = 60 + ai * agSpacing;
       if (ag.photo) {
         try {
           var agImg = await loadImageAsync(ag.photo);
           ctx.save();
           ctx.beginPath();
-          roundRect(ctx, agX, agentY, 150, 190, 10);
+          roundRect(ctx, agX, agentStartY, agPhotoW, agPhotoH, 10);
           ctx.clip();
-          var _scagImg = Math.max(150/agImg.width, 190/agImg.height);
-          var _dwagImg = agImg.width * _scagImg, _dhagImg = agImg.height * _scagImg;
-          ctx.drawImage(agImg, agX + (150 - _dwagImg)/2, agentY + (190 - _dhagImg)/2, _dwagImg, _dhagImg);
+          var _scag = Math.max(agPhotoW/agImg.width, agPhotoH/agImg.height);
+          var _dwag = agImg.width * _scag, _dhag = agImg.height * _scag;
+          ctx.drawImage(agImg, agX + (agPhotoW - _dwag)/2, agentStartY + (agPhotoH - _dhag)/2, _dwag, _dhag);
           ctx.restore();
-          ctx.strokeStyle = '#A2B6C0';
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          roundRect(ctx, agX, agentY, 150, 190, 10);
-          ctx.stroke();
+          ctx.strokeStyle = '#A2B6C0'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); roundRect(ctx, agX, agentStartY, agPhotoW, agPhotoH, 10); ctx.stroke();
         } catch(e) {}
       }
-      var tX = ag.photo ? agX + 166 : agX;
-      ctx.font = '700 27px "Montserrat", sans-serif';
-      ctx.fillStyle = pal.text;
-      ctx.textAlign = 'left';
-      ctx.fillText(ag.name, tX, agentY + 27);
-      ctx.font = '400 21px "Montserrat", sans-serif';
-      ctx.fillStyle = pal.accent;
-      if (ag.title) ctx.fillText(ag.title, tX, agentY + 53);
-      if (ag.phone) ctx.fillText(ag.phone, tX, agentY + 78);
-      if (ag.email) { ctx.font = '400 19px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, agentY + 101); }
-      if (ag.license) { ctx.font = '400 17px Montserrat'; ctx.fillStyle = pal.logoKey === 'dark' ? '#5a4832' : '#B8CED8'; ctx.fillText(ag.license, tX, agentY + 122); }
+      var tX = ag.photo ? agX + agPhotoW + 14 : agX;
+      var nameSz = isSquare ? 22 : 27;
+      var infoSz = isSquare ? 17 : 21;
+      var lineH  = isSquare ? 22 : 25;
+      var lineY  = agentStartY + nameSz;
+      ctx.font = '700 ' + nameSz + 'px "Montserrat", sans-serif'; ctx.fillStyle = pal.text;
+      ctx.textAlign = 'left'; ctx.fillText(ag.name, tX, lineY); lineY += lineH;
+      ctx.font = '400 ' + infoSz + 'px "Montserrat", sans-serif'; ctx.fillStyle = pal.accent;
+      if (ag.title)   { ctx.fillText(ag.title,   tX, lineY); lineY += lineH; }
+      if (ag.phone)   { ctx.fillText(ag.phone,   tX, lineY); lineY += lineH; }
+      if (ag.email)   { ctx.font = '400 ' + (infoSz - 2) + 'px Montserrat'; ctx.fillStyle = pal.accent; ctx.fillText(ag.email, tX, lineY); lineY += lineH; }
+      if (ag.license) { ctx.font = '400 ' + (infoSz - 4) + 'px Montserrat'; ctx.fillStyle = pal.logoKey === 'dark' ? '#5a4832' : '#B8CED8'; ctx.fillText(ag.license, tX, lineY); }
     }
-    agentY += 112;
   }
 
-  // Gateway circular logo — large, bottom left
+  // ── Bottom zone — logo left, JUST SOLD right ──────────────────────────
+  // Anchored to canvas bottom so it never collides with agent content above
+  var bottomY = H - bottomZone;
+
+  // Thin separator above bottom zone
+  ctx.strokeStyle = pal.accent + '33'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, bottomY - 8); ctx.lineTo(W - 60, bottomY - 8); ctx.stroke();
+
+  // Gateway circular logo — bottom left
   try {
     var logoSrc = (pal && pal.logoKey === 'dark') ? (LOGO_ROUND_SUBMARK || 'https://res.cloudinary.com/dnmrgpubz/image/upload/v1748440952/GWlogo_circle_o4vvuv.png') : (LOGO_CIRCLE_LIGHT || 'https://res.cloudinary.com/dnmrgpubz/image/upload/v1748440952/GWlogo_circle_o4vvuv.png');
     var logoImg = await loadImageAsync(logoSrc);
-    var sz = 155;
-    ctx.drawImage(logoImg, 60, H - sz - 50, sz, sz);
+    var logoTopY = bottomY + Math.round((bottomZone - logoSz) / 2);
+    ctx.drawImage(logoImg, 60, logoTopY, logoSz, logoSz);
   } catch(e) {}
 
-  // "JUST SOLD!" bold large — bottom right
+  // "JUST SOLD!" — bottom right
+  var jsFontSz = isSquare ? 72 : 96;
   ctx.textAlign = 'right';
-  ctx.font = 'bold 96px "EB Garamond", Georgia, serif';
+  ctx.font = 'bold ' + jsFontSz + 'px "EB Garamond", Georgia, serif';
   ctx.fillStyle = pal.text;
-  ctx.fillText('JUST SOLD!', W - 55, H - 155);
+  ctx.fillText('JUST SOLD!', W - 55, bottomY + Math.round(bottomZone * 0.52));
 
-  // Script subtitle
-  ctx.font = 'italic 30px "EB Garamond", Georgia, serif';
+  // Italic subtitle
+  ctx.font = 'italic ' + (isSquare ? 22 : 30) + 'px "EB Garamond", Georgia, serif';
   ctx.fillStyle = pal.accent;
-  ctx.fillText('A huge congrats to our happy clients!', W - 55, H - 108);
+  ctx.fillText('A huge congrats to our happy clients!', W - 55, bottomY + Math.round(bottomZone * 0.72));
 
-  // Website and phone
-  ctx.font = '400 20px "Montserrat", sans-serif';
+  // Website
+  ctx.font = '400 ' + (isSquare ? 16 : 20) + 'px "Montserrat", sans-serif';
   ctx.fillStyle = pal.label;
-  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W - 55, H - 50);
+  ctx.fillText('www.gatewayreadvisors.com  |  712-226-8000', W - 55, H - 18);
 }
 
 // ---- Shared helper: draw the residential agent strip + logo + footer ----
