@@ -26,5 +26,5 @@
 // ================================================================
 window.AI_CONFIG = {
   proxyUrl:    'https://jrtaxhfglcymipncwmvu.supabase.co/functions/v1/gateway-api',
-  proxySecret: ''    // must match GATEWAY_SECRET set via: supabase secrets set GATEWAY_SECRET=...
+  proxySecret: 'gateway2026abc'
 };
