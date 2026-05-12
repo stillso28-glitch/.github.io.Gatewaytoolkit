@@ -38,7 +38,7 @@ var BRAND = {
 // ==== AI STATUS INDICATOR ====
 // Shows a subtle badge in the nav when Claude is or isn't configured.
 function getClaudeKeyGlobal() {
-  return (localStorage.getItem('gw_claude_api_key') || '').trim();
+  return (window._gwTeamClaudeKey || localStorage.getItem('gw_claude_api_key') || '').trim();
 }
 
 function renderAIStatusBadge() {

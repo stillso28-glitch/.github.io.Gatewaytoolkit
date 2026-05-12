@@ -200,7 +200,10 @@ var GatewayAPI = (function () {
           })
         })
           .then(function (r) {
-            if (r.status === 401) throw new Error('Invalid Claude API key. Check ✦ AI Setup.');
+            if (r.status === 401) {
+              console.error('[API] 401 from Anthropic — key prefix used:', k ? k.slice(0, 14) + '…' : '(empty)');
+              throw new Error('Invalid Claude API key. Check ✦ AI Setup.');
+            }
             if (r.status === 429) throw new Error('Claude rate limit reached. Wait a moment and try again.');
             if (!r.ok) return r.json().then(function (e) {
               throw new Error((e.error && e.error.message) || 'Claude API error ' + r.status);
