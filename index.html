@@ -7,8 +7,9 @@
 
 <!-- Config (gitignored — holds API keys) -->
 <script src="config.js"></script>
-<!-- Sync config (committed — Supabase public keys only) -->
+<!-- Committed team configs (safe to deploy — no raw secrets) -->
 <script src="sync-config.js"></script>
+<script src="ai-config.js"></script>
 <script src="assets/logos.js"></script>
 
 <!-- Fonts -->
@@ -28,8 +29,8 @@
 <link rel="stylesheet" href="styles/video.css">
 <link rel="stylesheet" href="styles/sync.css">
 
-<!-- Supabase JS v2 (cross-device sync) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Supabase JS v2 (cross-device sync) — pinned to avoid stale CDN cache -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -1703,6 +1704,7 @@
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 
 <!-- ── App modules (load order matches dependency graph) ─────────── -->
+<script src="app/utils.js"></script>
 <script src="app/sync.js"></script>
 <script src="app/api.js"></script>
 <script src="app/core.js"></script>
