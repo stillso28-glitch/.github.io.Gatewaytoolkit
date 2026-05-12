@@ -276,6 +276,22 @@
             return;
           }
 
+          // Before writing agent profile keys, evict any stale ones from
+          // localStorage that aren't in this cloud snapshot. This prevents
+          // old typo-email keys from surviving pull → push cycles.
+          var cloudAgentKeys = {};
+          rows.forEach(function (row) {
+            if (row.data_key && row.data_key.indexOf('gateway_agent_profile_') === 0) {
+              cloudAgentKeys[row.data_key] = true;
+            }
+          });
+          for (var _i = localStorage.length - 1; _i >= 0; _i--) {
+            var _lk = localStorage.key(_i);
+            if (_lk && _lk.indexOf('gateway_agent_profile_') === 0 && !cloudAgentKeys[_lk]) {
+              localStorage.removeItem(_lk);
+            }
+          }
+
           var count = 0;
           rows.forEach(function (row) {
             if (!row.data_key || !isSyncable(row.data_key)) return;
