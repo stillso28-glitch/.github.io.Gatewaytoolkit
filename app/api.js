@@ -166,6 +166,9 @@ var GatewayAPI = (function () {
         })
           .then(function (r) {
             if (!r.ok) return r.json().then(function (e) {
+              if (r.status === 401 || r.status === 403) {
+                throw new Error('Sign in via ☁ Sync to use shared AI, or click ✦ AI to add a personal key.');
+              }
               throw new Error(e.error || 'Proxy error HTTP ' + r.status);
             });
             return r.json();

@@ -131,11 +131,13 @@
         if (res.data && res.data.session) {
           self._session = res.data.session;
           self._updateUI(res.data.session.user.email);
+          // JWT is now live — update AI badge immediately so ✦ AI On shows
+          if (typeof window.renderAIStatusBadge === 'function') window.renderAIStatusBadge();
           self._pullAll();
         }
       });
 
-      // Keep session fresh via auth state changes
+      // Keep session and AI badge in sync whenever Supabase refreshes the token
       this._client.auth.onAuthStateChange(function (event, session) {
         self._session = session;
         if (session) {
@@ -143,6 +145,7 @@
         } else {
           self._updateUI(null);
         }
+        if (typeof window.renderAIStatusBadge === 'function') window.renderAIStatusBadge();
       });
     },
 
@@ -194,6 +197,10 @@
         .then(function (res) {
           if (res.error) {
             console.error('[Sync] Pull error:', res.error);
+            var pullMsg = res.error.code === '42P01'
+              ? 'Sync table missing — run the migration SQL in Supabase first.'
+              : 'Sync download failed: ' + (res.error.message || res.error.code || 'unknown error');
+            self._showToast('⚠ ' + pullMsg);
             return;
           }
           var rows = res.data || [];
@@ -205,7 +212,7 @@
               return localStorage.getItem(k) !== null;
             });
             if (hasLocal) {
-              self._showToast('Cloud is empty — uploading your data now…');
+              self._showToast('Cloud account is empty — uploading your data now…');
               return self._pushAll();
             }
             self._showToast('Signed in. No cloud data yet.');
@@ -224,8 +231,7 @@
             }
           });
           self._setLastSync(new Date());
-          self._showToast('Synced ' + count + ' item(s) from cloud ✓');
-          // Refresh any live UI that reads localStorage on load
+          self._showToast('Downloaded ' + count + ' item(s) from your account ✓');
           self._refreshModules();
         });
     },
@@ -287,10 +293,15 @@
         .then(function (res) {
           if (res.error) {
             console.error('[Sync] Push-all error:', res.error);
+            var pushMsg = res.error.code === '42P01'
+              ? 'Sync table missing — run the migration SQL in Supabase first.'
+              : 'Upload failed: ' + (res.error.message || res.error.code || 'unknown error');
+            self._showToast('⚠ ' + pushMsg);
             return;
           }
           self._setLastSync(new Date());
-          self._showToast('All data pushed to cloud ✓');
+          self._showToast('All data uploaded to your account ✓');
+          self._refreshModules();
         });
     },
 
@@ -445,17 +456,17 @@
 
   window.doSyncPull = function () {
     var btn = document.getElementById('sync-pull-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Pulling…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Downloading…'; }
     GatewaySync.manualPull().finally(function () {
-      if (btn) { btn.disabled = false; btn.textContent = '↓ Pull from Cloud'; }
+      if (btn) { btn.disabled = false; btn.textContent = '↓ Download to This Device'; }
     });
   };
 
   window.doSyncPush = function () {
     var btn = document.getElementById('sync-push-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Pushing…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
     GatewaySync.manualPush().finally(function () {
-      if (btn) { btn.disabled = false; btn.textContent = '↑ Push to Cloud'; }
+      if (btn) { btn.disabled = false; btn.textContent = '↑ Upload This Device'; }
     });
   };
 
