@@ -85,8 +85,14 @@
 
     // ── Initialise (called from core.js after DOM ready) ─────────
     init: function () {
+      // SYNC_CONFIG (sync-config.js, committed) takes priority;
+      // falls back to CONFIG (config.js, gitignored) for local dev.
+      var syncCfg = window.SYNC_CONFIG || {};
       var cfg = window.CONFIG || {};
-      if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
+      var supabaseUrl     = syncCfg.supabaseUrl     || cfg.supabaseUrl;
+      var supabaseAnonKey = syncCfg.supabaseAnonKey || cfg.supabaseAnonKey;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
         // Sync is optional — silently skip if not configured
         return;
       }
@@ -98,8 +104,8 @@
       }
 
       this._client = window.supabase.createClient(
-        cfg.supabaseUrl,
-        cfg.supabaseAnonKey
+        supabaseUrl,
+        supabaseAnonKey
       );
 
       // Restore persisted session (works across page refreshes)
