@@ -19,8 +19,10 @@
 
 const ALLOWED_ORIGIN  = Deno.env.get('ALLOWED_ORIGIN')  || 'https://gatewayhq.github.io';
 const CLAUDE_API_KEY  = Deno.env.get('CLAUDE_API_KEY')  || '';
-const GATEWAY_SECRET  = Deno.env.get('GATEWAY_SECRET')  || '';
 const BUFFER_TOKEN    = Deno.env.get('BUFFER_ACCESS_TOKEN') || '';
+// Auth is handled by Supabase JWT verification (enabled in function settings).
+// Only agents with a Supabase account can reach this function — no shared
+// secret needed in code.
 
 const ANTHROPIC_VER   = '2023-06-01';
 const DEFAULT_MODEL   = 'claude-sonnet-4-6';
@@ -32,7 +34,7 @@ const FETCH_TIMEOUT   = 45_000; // ms — matches browser-side AbortController
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin':  ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-gateway-secret',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Cache-Control':                'no-store',
 };
 
@@ -41,14 +43,6 @@ function json(data: unknown, status = 200): Response {
     status,
     headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
   });
-}
-
-// ── Auth ─────────────────────────────────────────────────────────
-
-function authorized(req: Request): boolean {
-  // If no GATEWAY_SECRET is set, the function is open (dev mode).
-  if (!GATEWAY_SECRET) return true;
-  return req.headers.get('x-gateway-secret') === GATEWAY_SECRET;
 }
 
 // ── Route: /api/claude ───────────────────────────────────────────
@@ -205,11 +199,6 @@ Deno.serve(async (req: Request) => {
   // Preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
-
-  // Auth gate
-  if (!authorized(req)) {
-    return json({ error: 'Unauthorized' }, 401);
   }
 
   const path = new URL(req.url).pathname;

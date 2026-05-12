@@ -1,30 +1,26 @@
 // ================================================================
 // Gateway AI Config — committed to repo, safe to do so because:
-//   • proxyUrl routes through YOUR Supabase Edge Function only
 //   • The actual Claude API key lives in Supabase secrets, never here
-//   • If this secret is ever compromised, rotate it in Supabase — done
+//   • Access is controlled by Supabase user accounts — only agents
+//     with a Supabase login can use the shared Claude key
+//   • Revoking an agent's access: delete their account in Supabase
 //
-// SETUP (one-time, no Vercel needed):
-//   1. Deploy the Edge Function from your project root:
+// HOW IT WORKS
+//   Agents log in via the ☁ Sync button → they get a Supabase JWT →
+//   that JWT authorises Claude API calls through the Edge Function.
+//   Not logged in → falls back to a personal Claude key via ✦ AI.
+//
+// SETUP (one-time):
+//   1. Deploy the Edge Function:
 //        supabase functions deploy gateway-api
-//
-//   2. Set secrets in Supabase (never committed to code):
+//   2. Add the Claude API key as a Supabase secret:
 //        supabase secrets set CLAUDE_API_KEY=sk-ant-...
-//        supabase secrets set GATEWAY_SECRET=<any-strong-random-string>
-//        supabase secrets set BUFFER_ACCESS_TOKEN=...   (optional)
+//   3. Create a Supabase user account for each agent:
+//        Supabase dashboard → Authentication → Users → Add user
+//   4. Commit this file — done. No secrets here.
 //
-//   3. Paste your chosen GATEWAY_SECRET below as proxySecret.
-//      The proxyUrl is already set — it's your existing Supabase project.
-//
-//   4. Commit this file — all agents get AI automatically. Done.
-//
-// Without a proxy: leave proxyUrl empty and agents enter their own
-// Claude API key via the ✦ AI button. Both modes work simultaneously.
-//
-// Edge Function lives at:
-//   supabase/functions/gateway-api/index.ts
+// Edge Function: supabase/functions/gateway-api/index.ts
 // ================================================================
 window.AI_CONFIG = {
-  proxyUrl:    'https://jrtaxhfglcymipncwmvu.supabase.co/functions/v1/gateway-api',
-  proxySecret: 'gateway2026abc'
+  proxyUrl: 'https://jrtaxhfglcymipncwmvu.supabase.co/functions/v1/gateway-api'
 };
