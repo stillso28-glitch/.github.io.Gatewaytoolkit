@@ -1245,7 +1245,17 @@
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:20px 0">
         <button class="btn-sm" style="padding:12px 28px;font-size:14px;font-weight:600" onclick="hvDownloadPDF()">📄 Download PDF Report</button>
         <button class="btn-sm" style="padding:12px 28px;font-size:14px;font-weight:600" onclick="hvDownloadPPTX()">📊 Download PPTX Presentation</button>
+        <button id="hv-save-btn" class="btn-sm" style="padding:12px 28px;font-size:14px;font-weight:600;background:#C8A84B;color:#152229;border-color:#C8A84B" onclick="saveCurrentHV()">💾 Save Valuation</button>
         <button class="btn-sm" style="padding:12px 28px;font-size:14px;font-weight:600;background:rgba(162,182,192,0.15)" onclick="resetHomeValuation()">🔄 Start New Valuation</button>
+      </div>
+    </div>
+
+    <!-- SAVED VALUATIONS PANEL -->
+    <div id="hv-saved-panel" style="display:none;margin-top:8px">
+      <div class="form-section">
+        <h4 style="color:#C8A84B;margin-bottom:4px">💾 Saved Valuations</h4>
+        <p style="color:var(--brand-gray);font-size:12px;margin-bottom:14px">Saved locally &amp; synced to your account. Load any valuation to restore the full form and results.</p>
+        <div id="hv-saved-list"></div>
       </div>
     </div>
   </div>
