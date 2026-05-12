@@ -16,7 +16,7 @@
 // ─────────────────────────────────────────────────────────────────
 // gw_claude_api_key, gw_buffer_token, gw_invoices,
 // gw_template_presets, gw_saved_agents, gateway_about_company,
-// gatewayOMs, gateway_om_template_selection, gh_pat, gh_branch
+// gatewayOMs, gateway_om_template_selection, gatewayHVs, gh_pat, gh_branch
 // + any key starting with "gateway_agent_profile_"
 //
 // KEYS THAT DO NOT SYNC (device-local)
@@ -37,6 +37,7 @@
     'gateway_about_company',
     'gatewayOMs',
     'gateway_om_template_selection',
+    'gatewayHVs',
     'gh_pat',
     'gh_branch'
   ];

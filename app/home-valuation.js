@@ -657,6 +657,109 @@ function resetHomeValuation() {
   window.scrollTo(0,0);
 }
 
+// ---- SAVED VALUATIONS ----
+function getSavedHVs() {
+  try { return JSON.parse(localStorage.getItem('gatewayHVs') || '{}'); } catch(e) { return {}; }
+}
+
+function saveCurrentHV() {
+  if (!hvFormData.address) { alert('Run a valuation first, then save.'); return; }
+  var saved = getSavedHVs();
+  var key = hvFormData.address.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  saved[key] = {
+    address: hvFormData.address,
+    city:    hvFormData.city,
+    state:   hvFormData.state,
+    date:    new Date().toLocaleDateString(),
+    data:    { hvFormData: hvFormData, hvValuation: hvValuation, hvComps: hvComps }
+  };
+  localStorage.setItem('gatewayHVs', JSON.stringify(saved));
+  renderSavedHVs();
+  var btn = document.getElementById('hv-save-btn');
+  if (btn) { btn.textContent = '✓ Saved!'; setTimeout(function() { btn.textContent = '💾 Save Valuation'; }, 2000); }
+}
+
+function loadHV(key) {
+  var saved = getSavedHVs();
+  var record = saved[key];
+  if (!record) return;
+  if (!confirm('Load "' + record.address + '"? This will replace your current form.')) return;
+  hvFormData   = record.data.hvFormData  || {};
+  hvValuation  = record.data.hvValuation || {};
+  hvComps      = record.data.hvComps     || [];
+  var fd = hvFormData;
+  function setVal(id, val) { var el = document.getElementById(id); if (el) el.value = (val != null ? val : ''); }
+  setVal('hv-address', fd.address);   setVal('hv-city', fd.city);
+  setVal('hv-state', fd.state);       setVal('hv-zip', fd.zip);
+  setVal('hv-beds', fd.beds);         setVal('hv-baths-full', fd.bathsFull);
+  setVal('hv-baths-half', fd.bathsHalf); setVal('hv-sqft', fd.sqft);
+  setVal('hv-lot-sf', fd.lotSf);      setVal('hv-lot-ac', fd.lotAc);
+  setVal('hv-year', fd.yearBuilt);    setVal('hv-garage', fd.garage);
+  setVal('hv-stories', fd.stories);   setVal('hv-basement', fd.basement);
+  setVal('hv-condition', fd.condition); setVal('hv-kitchen', fd.kitchen);
+  setVal('hv-kitchen-yr', fd.kitchenYr); setVal('hv-bath-remodel', fd.bathRemodel);
+  setVal('hv-bath-yr', fd.bathRemodelYr); setVal('hv-roof-age', fd.roofAge);
+  setVal('hv-hvac-age', fd.hvacAge);  setVal('hv-windows', fd.windows);
+  setVal('hv-flooring', fd.flooring); setVal('hv-upgrades', fd.upgrades);
+  setVal('hv-agent-name', fd.agentName); setVal('hv-agent-email', fd.agentEmail);
+  setVal('hv-agent-phone', fd.agentPhone); setVal('hv-brokerage', fd.brokerage);
+  setVal('hv-val-date', fd.valDate);
+  if (hvValuation.mid) {
+    hvRenderResults();
+    document.getElementById('hv-results-section').style.display = 'block';
+  }
+  window.scrollTo(0, 0);
+}
+
+function deleteHV(key) {
+  var saved = getSavedHVs();
+  if (!saved[key]) return;
+  if (!confirm('Delete saved valuation for "' + saved[key].address + '"?')) return;
+  delete saved[key];
+  localStorage.setItem('gatewayHVs', JSON.stringify(saved));
+  renderSavedHVs();
+}
+
+function renderSavedHVs() {
+  var container = document.getElementById('hv-saved-list');
+  if (!container) return;
+  var saved = getSavedHVs();
+  var keys = Object.keys(saved);
+  var panel = document.getElementById('hv-saved-panel');
+  if (keys.length === 0) {
+    if (panel) panel.style.display = 'none';
+    return;
+  }
+  if (panel) panel.style.display = 'block';
+  // Group by city
+  var byCity = {};
+  keys.forEach(function(k) {
+    var city = (saved[k].city || 'Other');
+    if (!byCity[city]) byCity[city] = [];
+    byCity[city].push(k);
+  });
+  var html = '';
+  Object.keys(byCity).forEach(function(city) {
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--brand-gray);margin:12px 0 6px">' + city + '</div>';
+    byCity[city].forEach(function(k) {
+      var r = saved[k];
+      var price = (r.data && r.data.hvValuation && r.data.hvValuation.mid)
+        ? '$' + r.data.hvValuation.mid.toLocaleString() : '—';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(162,182,192,0.06);border-radius:6px;margin-bottom:6px">'
+        + '<div>'
+        + '<span style="color:var(--brand-cream);font-weight:500;font-size:13px">' + r.address + '</span>'
+        + '<span style="color:#C8A84B;font-size:12px;margin-left:10px">' + price + '</span>'
+        + '<span style="color:var(--brand-gray);font-size:11px;margin-left:10px">' + r.date + '</span>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px">'
+        + '<button class="btn-sm" onclick="loadHV(\'' + k + '\')">Load</button>'
+        + '<button class="btn-sm" style="background:rgba(192,57,43,0.15);color:#c0392b;border-color:rgba(192,57,43,0.3)" onclick="deleteHV(\'' + k + '\')">Delete</button>'
+        + '</div></div>';
+    });
+  });
+  container.innerHTML = html;
+}
+
 // Expose
 window.runHomeValuation = runHomeValuation;
 window.hvSortComps = hvSortComps;
@@ -665,3 +768,7 @@ window.hvDownloadPDF = hvDownloadPDF;
 window.hvDownloadPPTX = hvDownloadPPTX;
 window.resetHomeValuation = resetHomeValuation;
 window.initHomeValuation = initHomeValuation;
+window.saveCurrentHV = saveCurrentHV;
+window.loadHV = loadHV;
+window.deleteHV = deleteHV;
+window.renderSavedHVs = renderSavedHVs;

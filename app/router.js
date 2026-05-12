@@ -25,7 +25,10 @@ function navigateTo(page) {
   if (page === 'valuation' && !valuationInitialized) initValuation();
   if (page === 'leasing' && !leasingInitialized) initLeasing();
   if (page === 'invoice' && !invoiceInitialized) { initInvoice(); invoiceInitialized = true; }
-  if (page === 'home-valuation' && !homeValuationInitialized) { initHomeValuation(); homeValuationInitialized = true; }
+  if (page === 'home-valuation') {
+    if (!homeValuationInitialized) { initHomeValuation(); homeValuationInitialized = true; }
+    renderSavedHVs();
+  }
 }
 
 function showGlobalStatus(msg) {
