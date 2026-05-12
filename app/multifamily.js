@@ -952,12 +952,14 @@ function generateGatewayInstitutional() {
     var propName = (vv('propName1') + ' ' + vv('propName2')).trim() || 'Property';
     var addr  = vv('address');
     var asks  = vv('askingPrice');
-    var cap   = vv('capRate');
     var units = vv('totalUnits');
     var ppu   = vv('pricePerUnit');
     var noi   = vv('noi');
     var grm   = vv('grm');
-    var occ   = (function(){ var o=(vv('occupancy')||'100').trim(); return /\d$/.test(o)?o+'%':o; })();
+    var _capRaw = (vv('capRate') || '').trim();
+    var cap = _capRaw && _capRaw.slice(-1) !== '%' ? _capRaw + '%' : _capRaw;
+    var _occRaw = (vv('occupancy') || '100').trim();
+    var occ = _occRaw.slice(-1) === '%' ? _occRaw : _occRaw + '%';
     var yb    = vv('yearBuilt');
     var exec  = vv('execDesc');
     var hls   = [vv('hl1'), vv('hl2'), vv('hl3'), vv('hl4')].filter(Boolean);
@@ -1000,7 +1002,7 @@ function generateGatewayInstitutional() {
     txt(s1, propName, RX, 1.22, 5.1, 1.4, { fontSize:48, color:W, fontFace:'Cambria', bold:true, lineSpacingMultiple:1.1 });
     txt(s1, 'APARTMENTS', RX, 2.72, 5.1, 0.56, { fontSize:30, color:G, fontFace:'Cambria' });
     txt(s1, addr + (vv('mktCity') ? '\n' + vv('mktCity') : ''), RX, 3.44, 5.1, 0.56, { fontSize:10, color:ST, fontFace:'Calibri', lineSpacingMultiple:1.35 });
-    var kpis1 = [{ v:asks, l:'ASKING PRICE' },{ v:cap, l:'CAP RATE' },{ v:units, l:'TOTAL UNITS' },{ v:ppu, l:'PRICE / UNIT' }];
+    var kpis1 = [{ v:fmt(parseFloat(asks.replace(/[^0-9.]/g,''))||0), l:'ASKING PRICE' },{ v:cap||'—', l:'CAP RATE' },{ v:units||'—', l:'TOTAL UNITS' },{ v:fmt(parseFloat((ppu||'').replace(/[^0-9.]/g,''))||0), l:'PRICE / UNIT' }];
     var kpiW1 = 2.3, kpiH1 = 0.82, kpiY1 = 4.2;
     [0,1].forEach(function(col) {
       [0,1].forEach(function(row) {
@@ -1061,7 +1063,7 @@ function generateGatewayInstitutional() {
     box(s3, 8.465, 0, 0.06, 7.12, G);
     var kRX = 8.54, kRW = 13.3-kRX-0.16, cardH3 = (7.12-0.36)/3;
     var kpiCards3 = [
-      { l:'NET OPERATING INCOME',    v:noi||fmt(curNOI),  d:'Current Annual NOI' },
+      { l:'NET OPERATING INCOME',    v:fmt(noi ? parseFloat(noi.replace(/[^0-9.]/g,''))||0 : curNOI),  d:'Current Annual NOI' },
       { l:'GROSS RENT MULTIPLIER',   v:grm||'—',     d:'Purchase Price / Gross Rent' },
       { l:'OCCUPANCY RATE',          v:occ,               d:(units||'') + ' Units' },
     ];
@@ -1096,7 +1098,7 @@ function generateGatewayInstitutional() {
     uds.slice(0,8).forEach(function(u,i){
       var ry = tblY4+0.34+i*0.3;
       box(s4, 0.38, ry, 7.8, 0.3, i%2===0?C:C2);
-      [String(u.type||''), fmtNum(u.units), fmtNum(u.sqft), '$'+fmtNum(u.rent), '$'+Math.round((+u.units||0)*(+u.rent||0)).toLocaleString()].forEach(function(val,ci){
+      [String(u.type||''), fmtNum(u.units), fmtNum(u.sqft), '$'+fmtNum(u.rent), fmt((+u.units||0)*(+u.rent||0))].forEach(function(val,ci){
         txt(s4, val, 0.38+colX4[ci], ry, colW4[ci], 0.3, { fontSize:9, color:CH, fontFace:'Calibri', align:'center', valign:'middle' });
       });
     });
@@ -1203,8 +1205,8 @@ function generateGatewayInstitutional() {
       var dx = 0.38+i*(dW6+0.14), dy = 4.06, dh = 1.8;
       box(s6, dx, dy, dW6, dh, W);
       box(s6, dx, dy, dW6, 0.052, G);
-      txt(s6, drv.t||'Market Driver', dx+0.1, dy+0.12, dW6-0.2, 0.28, { fontSize:8.5, color:N, fontFace:'Calibri', bold:true });
-      txt(s6, drv.b||'', dx+0.1, dy+0.52, dW6-0.2, dh-0.62, { fontSize:9.5, color:CH, fontFace:'Calibri', lineSpacingMultiple:1.35 });
+      txt(s6, drv.t||'Market Driver', dx+0.1, dy+0.1, dW6-0.2, 0.26, { fontSize:8.5, color:N, fontFace:'Calibri', bold:true, valign:'top' });
+      txt(s6, drv.b||'', dx+0.1, dy+0.4, dW6-0.2, dh-0.5, { fontSize:9.5, color:CH, fontFace:'Calibri', lineSpacingMultiple:1.35, valign:'top' });
     });
     footer(s6, '6');
 
@@ -1239,28 +1241,22 @@ function generateGatewayInstitutional() {
     var cY8 = 1.84, cH8 = 4.86;
     agts.slice(0,2).forEach(function(ag, i) {
       var cx = cStart8+i*(cW8+cGap8);
-      // Card base (cream) + gold top accent + navy photo band
       box(s8, cx, cY8, cW8, cH8, W);
       box(s8, cx, cY8, cW8, 0.06, G);
       box(s8, cx, cY8+0.06, cW8, 2.0, N);
-      // Initials avatar
       var iX = cx+cW8/2-0.52, iY = cY8+0.22;
       box(s8, iX, iY, 1.04, 1.04, N2);
       box(s8, iX, iY, 1.04, 0.042, G);
       var inits = (ag.name||'').split(' ').map(function(n){ return n[0]||''; }).join('').slice(0,2).toUpperCase();
       txt(s8, inits, iX, iY, 1.04, 1.04, { fontSize:28, color:W, fontFace:'Cambria', align:'center', valign:'middle' });
-      // Name and title inside navy band
       txt(s8, ag.name||'', cx, cY8+1.38, cW8, 0.38, { fontSize:18, color:W, fontFace:'Cambria', bold:true, align:'center', valign:'middle' });
       txt(s8, (ag.title||'').toUpperCase(), cx, cY8+1.78, cW8, 0.26, { fontSize:7.5, color:G, fontFace:'Calibri', charSpacing:1.5, align:'center' });
-      // Gold divider
       box(s8, cx+0.38, cY8+2.18, cW8-0.76, 0.022, G);
-      // Contact info
       txt(s8, ag.phone||'', cx, cY8+2.30, cW8, 0.36, { fontSize:16, color:N, fontFace:'Calibri', bold:true, align:'center' });
       txt(s8, ag.email||'', cx, cY8+2.72, cW8, 0.28, { fontSize:10, color:GR, fontFace:'Calibri', align:'center' });
       txt(s8, ag.licenses||ag.lic||'', cx, cY8+3.06, cW8, 0.26, { fontSize:8, color:ST, fontFace:'Calibri', italic:true, align:'center' });
-      // Bio
       box(s8, cx+0.38, cY8+3.42, cW8-0.76, 0.022, C2);
-      txt(s8, ag.bio||ag.description||'', cx+0.22, cY8+3.56, cW8-0.44, cH8-(3.56+0.18), { fontSize:9.5, color:CH, fontFace:'Calibri', lineSpacingMultiple:1.35 });
+      txt(s8, ag.bio||ag.description||'', cx+0.22, cY8+3.56, cW8-0.44, cH8-3.74, { fontSize:9.5, color:CH, fontFace:'Calibri', lineSpacingMultiple:1.35, valign:'top' });
     });
     footer(s8, '8');
 
